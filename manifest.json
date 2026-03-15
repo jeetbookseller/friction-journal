@@ -1,0 +1,22 @@
+{
+  "name": "Friction Journal",
+  "short_name": "FrictionJ",
+  "description": "Offline-first personal journaling with analog Bullet Journal friction",
+  "theme_color": "#1a1a2e",
+  "background_color": "#1a1a2e",
+  "display": "standalone",
+  "start_url": "/friction-journal/",
+  "scope": "/friction-journal/",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
