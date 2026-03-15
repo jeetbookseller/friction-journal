@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { getMonthRange, todayString } from '../../lib/dates';
 import { useTimelineForMonth } from '../../hooks/useTimeline';
 import { TimelineDay } from './TimelineDay';
