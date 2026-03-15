@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
+import { ActionList } from './components/actions/ActionList';
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -14,7 +15,7 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route element={<AppShell />}>
-          <Route index element={<PlaceholderPage title="Actions" />} />
+          <Route index element={<ActionList />} />
           <Route path="timeline" element={<PlaceholderPage title="Timeline" />} />
           <Route path="habits" element={<PlaceholderPage title="Habits" />} />
           <Route path="log" element={<PlaceholderPage title="Log" />} />
