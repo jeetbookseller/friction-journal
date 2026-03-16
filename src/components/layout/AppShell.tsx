@@ -86,16 +86,49 @@ const tabs = [
 
 export function AppShell() {
   return (
-    <div className="flex flex-col h-svh">
-      <header className="px-4 py-3 border-b border-border bg-surface">
+    <div className="flex flex-col md:flex-row h-svh">
+      {/* Mobile-only top header */}
+      <header className="md:hidden px-4 py-3 border-b border-border bg-surface">
         <span className="text-sm font-semibold tracking-wide text-on-surface-muted uppercase">
           Friction Journal
         </span>
       </header>
-      <main className="flex-1 overflow-y-auto">
+
+      {/* Desktop-only left sidebar */}
+      <aside className="hidden md:flex flex-col w-52 shrink-0 border-r border-border bg-surface py-6 px-3 gap-8">
+        <div className="px-3">
+          <span className="text-sm font-semibold tracking-wide text-on-surface-muted uppercase">
+            Friction Journal
+          </span>
+        </div>
+        <nav aria-label="Sidebar navigation" className="flex flex-col gap-1">
+          {tabs.map(({ to, label, icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 text-sm font-medium ${
+                  isActive
+                    ? 'bg-accent-subtle text-nav-active'
+                    : 'text-nav-inactive hover:bg-surface-overlay'
+                }`
+              }
+            >
+              {icon}
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-hidden">
         <Outlet />
       </main>
-      <nav className="flex bg-nav-bg shadow-nav border-t border-border">
+
+      {/* Mobile-only bottom tab nav */}
+      <nav aria-label="Tab navigation" className="md:hidden flex bg-nav-bg shadow-nav border-t border-border">
         {tabs.map(({ to, label, icon }) => (
           <NavLink
             key={to}
