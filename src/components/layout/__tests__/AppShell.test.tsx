@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppShell } from '../AppShell';
 
@@ -14,37 +14,39 @@ function renderWithRouter(initialPath = '/') {
 describe('AppShell', () => {
   it('renders bottom nav with 4 tabs', () => {
     renderWithRouter();
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(4);
+    const mobileNav = screen.getByRole('navigation', { name: 'Tab navigation' });
+    expect(mobileNav).toBeInTheDocument();
+    expect(within(mobileNav).getAllByRole('link')).toHaveLength(4);
   });
 
   it('renders Actions tab linking to /', () => {
     renderWithRouter();
-    const actionsLink = screen.getByRole('link', { name: /actions/i });
-    expect(actionsLink).toHaveAttribute('href', '/');
+    const links = screen.getAllByRole('link', { name: /actions/i });
+    expect(links[0]).toHaveAttribute('href', '/');
   });
 
   it('renders Timeline tab linking to /timeline', () => {
     renderWithRouter();
-    const link = screen.getByRole('link', { name: /timeline/i });
-    expect(link).toHaveAttribute('href', '/timeline');
+    const links = screen.getAllByRole('link', { name: /timeline/i });
+    expect(links[0]).toHaveAttribute('href', '/timeline');
   });
 
   it('renders Habits tab linking to /habits', () => {
     renderWithRouter();
-    const link = screen.getByRole('link', { name: /habits/i });
-    expect(link).toHaveAttribute('href', '/habits');
+    const links = screen.getAllByRole('link', { name: /habits/i });
+    expect(links[0]).toHaveAttribute('href', '/habits');
   });
 
   it('renders Log tab linking to /log', () => {
     renderWithRouter();
-    const link = screen.getByRole('link', { name: /log/i });
-    expect(link).toHaveAttribute('href', '/log');
+    const links = screen.getAllByRole('link', { name: /log/i });
+    expect(links[0]).toHaveAttribute('href', '/log');
   });
 
   it('renders header with "Friction Journal" text', () => {
     renderWithRouter();
-    expect(screen.getByText('Friction Journal')).toBeInTheDocument();
+    const instances = screen.getAllByText('Friction Journal');
+    expect(instances.length).toBeGreaterThanOrEqual(1);
   });
 
   it('header has border-b class', () => {
@@ -61,27 +63,32 @@ describe('AppShell', () => {
 
   it('nav has bg-nav-bg class', () => {
     renderWithRouter();
-    expect(screen.getByRole('navigation')).toHaveClass('bg-nav-bg');
+    const mobileNav = screen.getByRole('navigation', { name: 'Tab navigation' });
+    expect(mobileNav).toHaveClass('bg-nav-bg');
   });
 
   it('nav has shadow-nav class', () => {
     renderWithRouter();
-    expect(screen.getByRole('navigation')).toHaveClass('shadow-nav');
+    const mobileNav = screen.getByRole('navigation', { name: 'Tab navigation' });
+    expect(mobileNav).toHaveClass('shadow-nav');
   });
 
   it('nav has border-t class', () => {
     renderWithRouter();
-    expect(screen.getByRole('navigation')).toHaveClass('border-t');
+    const mobileNav = screen.getByRole('navigation', { name: 'Tab navigation' });
+    expect(mobileNav).toHaveClass('border-t');
   });
 
   it('nav has border-border class', () => {
     renderWithRouter();
-    expect(screen.getByRole('navigation')).toHaveClass('border-border');
+    const mobileNav = screen.getByRole('navigation', { name: 'Tab navigation' });
+    expect(mobileNav).toHaveClass('border-border');
   });
 
-  it('each tab link contains an svg icon with aria-hidden', () => {
+  it('each tab link in mobile nav contains an svg icon with aria-hidden', () => {
     renderWithRouter();
-    const links = screen.getAllByRole('link');
+    const mobileNav = screen.getByRole('navigation', { name: 'Tab navigation' });
+    const links = within(mobileNav).getAllByRole('link');
     links.forEach((link) => {
       const svg = link.querySelector('svg');
       expect(svg).toBeInTheDocument();
@@ -89,9 +96,10 @@ describe('AppShell', () => {
     });
   });
 
-  it('each tab link stacks icon and label vertically', () => {
+  it('each tab link in mobile nav stacks icon and label vertically', () => {
     renderWithRouter();
-    const links = screen.getAllByRole('link');
+    const mobileNav = screen.getByRole('navigation', { name: 'Tab navigation' });
+    const links = within(mobileNav).getAllByRole('link');
     links.forEach((link) => {
       expect(link).toHaveClass('flex-col');
       expect(link).toHaveClass('items-center');
@@ -114,11 +122,30 @@ describe('AppShell', () => {
     expect(screen.getAllByTestId('nav-dot')).toHaveLength(1);
   });
 
-  it('links have transition-colors class', () => {
+  it('mobile nav links have transition-colors class', () => {
     renderWithRouter();
-    const links = screen.getAllByRole('link');
+    const mobileNav = screen.getByRole('navigation', { name: 'Tab navigation' });
+    const links = within(mobileNav).getAllByRole('link');
     links.forEach((link) => {
       expect(link).toHaveClass('transition-colors');
+    });
+  });
+
+  it('sidebar navigation is rendered with 4 links', () => {
+    renderWithRouter();
+    const sidebarNav = screen.getByRole('navigation', { name: 'Sidebar navigation' });
+    expect(sidebarNav).toBeInTheDocument();
+    expect(within(sidebarNav).getAllByRole('link')).toHaveLength(4);
+  });
+
+  it('sidebar nav links display icon and label side by side', () => {
+    renderWithRouter();
+    const sidebarNav = screen.getByRole('navigation', { name: 'Sidebar navigation' });
+    const links = within(sidebarNav).getAllByRole('link');
+    links.forEach((link) => {
+      expect(link).toHaveClass('flex');
+      expect(link).toHaveClass('items-center');
+      expect(link).toHaveClass('gap-3');
     });
   });
 });
