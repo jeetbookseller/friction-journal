@@ -15,7 +15,7 @@ Offline-first personal journaling web app enforcing analog Bullet Journal fricti
 | Dates | date-fns |
 | PWA | vite-plugin-pwa |
 | Testing | Vitest + Testing Library + fake-indexeddb |
-| Future sync | Supabase PostgreSQL |
+| Sync | Supabase PostgreSQL + `@supabase/supabase-js` |
 
 ## Project Structure
 
@@ -26,7 +26,7 @@ src/
 ├── db/
 │   ├── models.ts                     # TypeScript interfaces (Action, TimelineEvent, Habit, HabitLog, RapidLog)
 │   ├── database.ts                   # Dexie instance with schema for all 5 tables
-│   └── sync.ts                       # Supabase sync stub (future)
+│   └── sync.ts                       # Supabase LWW sync (pull → apply → push → confirm)
 ├── hooks/
 │   ├── useActions.ts                 # CRUD for daily actions (date-scoped, priority cap)
 │   ├── useTimeline.ts                # CRUD for timeline events (month queries, upsert)
@@ -57,7 +57,8 @@ src/
 │       └── AddRapidLogForm.tsx       # Tag selector + text input with token colors
 ├── lib/
 │   ├── constants.ts                  # MAX_TOP_PRIORITIES=3, MAX_ACTIVE_HABITS=3, TEST_RUN_DAYS=7, TAG_OPTIONS
-│   └── dates.ts                      # todayString(), getMonthRange(), daysActiveCount()
+│   ├── dates.ts                      # todayString(), getMonthRange(), daysActiveCount()
+│   └── supabase.ts                   # Supabase client singleton (null when env vars absent)
 └── styles/
     └── index.css                     # Full design system: Tailwind @theme tokens, dark/light mode, animations
 
@@ -114,6 +115,7 @@ All work packages and redesign work packages are **complete**:
 - [x] **WP-3:** Minimalist Habit Tracker (active cap, test run badge, day dots)
 - [x] **WP-4:** Contextual Rapid Logging (tag filtering, chronological feed)
 - [x] **WP-5:** Supabase SQL migrations & sync stub
+- [x] **WP-7:** Supabase sync implementation (LWW pull/apply/push/confirm, `@supabase/supabase-js`, client singleton, env var types)
 - [x] **WP-6:** PWA configuration & GitHub Pages deployment workflow
 
 ### Redesign Work Packages
@@ -146,7 +148,30 @@ All work packages and redesign work packages are **complete**:
 
 ---
 
+## Supabase Setup (Next Steps)
+
+The sync engine is implemented and ready. To activate it:
+
+1. **Create a Supabase project** at [supabase.com](https://supabase.com) if you haven't already.
+
+2. **Apply the database migration** — paste the contents of `supabase/migrations/001_initial_schema.sql` into the Supabase SQL Editor and run it. This creates all 5 tables, RLS policies, `updated_at` triggers, indexes, and the `pull_changes` RPC.
+
+3. **Add credentials** — create `.env.local` (git-ignored) in the project root:
+   ```
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key-here
+   ```
+   Find both values in your Supabase project under **Settings → API**.
+
+4. **Restart the dev server** — `npm run dev`. The sync client activates automatically when both env vars are present.
+
+5. **Trigger a sync** — call `syncWithSupabase()` from `src/db/sync.ts` wherever appropriate (e.g. on app focus, after mutations, or on a timer).
+
+> Without `.env.local`, the app runs fully offline-only with no errors — sync is a no-op when env vars are absent.
+
+---
+
 ## Future Phases
 
-- **Supabase sync** — implement `src/db/sync.ts` stub using the `supabase/migrations/001_initial_schema.sql` schema (RLS, triggers, `pull_changes` RPC). Requires Supabase project setup and auth.
-- **Auth (v2)** — user authentication layer before enabling multi-device sync.
+- **Auth (v2)** — user authentication layer before enabling multi-device sync. The current RLS policies require `auth.uid() IS NOT NULL`; add Supabase Auth and pass the session token so RLS actually enforces per-user row isolation.
+- **Sync trigger UI** — expose sync status (`SyncStatus`) in the app shell (e.g. a subtle indicator showing last sync time or an error badge).
