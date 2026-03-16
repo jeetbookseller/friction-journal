@@ -144,6 +144,34 @@ describe('ActionItem', () => {
       />
     );
     const title = screen.getByText('Test action');
-    expect(title.className).toMatch(/font-bold/);
+    expect(title.className).toMatch(/font-semibold/);
+  });
+
+  it('uses custom-checkbox class on the checkbox input', () => {
+    render(
+      <ActionItem
+        action={makeAction()}
+        priorityCapReached={false}
+        onToggleComplete={vi.fn()}
+        onTogglePriority={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox.className).toMatch(/custom-checkbox/);
+  });
+
+  it('applies text-on-surface-faint class when action is completed', () => {
+    render(
+      <ActionItem
+        action={makeAction({ is_completed: 1 })}
+        priorityCapReached={false}
+        onToggleComplete={vi.fn()}
+        onTogglePriority={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    const title = screen.getByText('Test action');
+    expect(title.className).toMatch(/text-on-surface-faint/);
   });
 });
