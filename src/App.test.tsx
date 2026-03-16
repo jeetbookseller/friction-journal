@@ -15,4 +15,9 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: /habits/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /log/i })).toBeInTheDocument();
   });
+
+  it('mounts ToastProvider (aria-live region present)', () => {
+    render(<App />);
+    expect(document.querySelector('[aria-live="polite"]')).toBeInTheDocument();
+  });
 });
