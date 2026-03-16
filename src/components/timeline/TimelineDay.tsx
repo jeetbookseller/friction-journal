@@ -13,7 +13,8 @@ export function TimelineDay({ date, event, isToday, onUpsert }: TimelineDayProps
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
 
-  const dateLabel = format(parseISO(date), 'd EEE');
+  const dayNum = format(parseISO(date), 'd');
+  const dayName = format(parseISO(date), 'EEE');
 
   function handleBlur() {
     const trimmed = editValue.trim();
@@ -41,14 +42,27 @@ export function TimelineDay({ date, event, isToday, onUpsert }: TimelineDayProps
   }
 
   const showInput = !event || isEditing;
+  const hasNote = !!event && !isEditing;
+
+  const rootClass = [
+    'flex items-center gap-3 px-4 py-2 hover:bg-surface-overlay transition-colors',
+    isToday ? 'today bg-accent-subtle rounded-lg mx-2 my-1' : '',
+    hasNote ? 'border-l-2 border-accent' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-2 ${isToday ? 'today ring-1 ring-indigo-400' : ''}`}>
-      <span className="w-14 shrink-0 text-sm text-gray-400">{dateLabel}</span>
+    <div className={rootClass}>
+      <span className="w-14 shrink-0 text-sm">
+        <span className="font-semibold text-on-surface">{dayNum}</span>
+        {' '}
+        <span className="text-on-surface-faint">{dayName}</span>
+      </span>
       {showInput ? (
         <input
           type="text"
-          className="flex-1 bg-transparent text-sm text-gray-200 placeholder-gray-600 outline-none"
+          className="flex-1 bg-transparent text-sm text-on-surface placeholder:text-on-surface-faint outline-none"
           placeholder="Add a note…"
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
@@ -58,7 +72,7 @@ export function TimelineDay({ date, event, isToday, onUpsert }: TimelineDayProps
         />
       ) : (
         <span
-          className="flex-1 cursor-pointer text-sm text-gray-200"
+          className="flex-1 cursor-pointer text-sm text-on-surface"
           onClick={handleClickNote}
         >
           {event!.note}
