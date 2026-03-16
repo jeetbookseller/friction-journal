@@ -78,4 +78,37 @@ describe('HabitTracker', () => {
     render(<HabitTracker />);
     expect(screen.getByText(/no active habits/i)).toBeInTheDocument();
   });
+
+  // RWP-4 redesign tests
+  it('empty state renders an SVG icon', () => {
+    render(<HabitTracker />);
+    expect(screen.getByRole('img', { name: /target/i })).toBeInTheDocument();
+  });
+
+  it('empty state renders a description', () => {
+    render(<HabitTracker />);
+    expect(screen.getByText(/add up to 3 habits/i)).toBeInTheDocument();
+  });
+
+  it('root element has animate-fade-in class', () => {
+    const { container } = render(<HabitTracker />);
+    expect(container.firstChild).toHaveClass('animate-fade-in');
+  });
+
+  it('slot count pill has rounded-full class', () => {
+    mockActiveHabits([makeHabit({ id: 1 })]);
+    render(<HabitTracker />);
+    const pill = screen.getByText(/1\/3 habit slots/i);
+    expect(pill).toHaveClass('rounded-full');
+  });
+
+  it('each habit card wrapper has rounded-xl class', () => {
+    mockActiveHabits([
+      makeHabit({ id: 1, name: 'Morning Run' }),
+      makeHabit({ id: 2, name: 'Evening Walk' }),
+    ]);
+    const { container } = render(<HabitTracker />);
+    const cards = container.querySelectorAll('.rounded-xl');
+    expect(cards.length).toBeGreaterThanOrEqual(2);
+  });
 });

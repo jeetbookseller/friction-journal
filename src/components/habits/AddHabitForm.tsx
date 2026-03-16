@@ -20,7 +20,7 @@ export function AddHabitForm({ onAdd, capReached }: AddHabitFormProps) {
   return (
     <form onSubmit={handleSubmit} className="p-3 flex flex-col gap-2">
       {capReached && (
-        <p className="text-xs text-amber-400">
+        <p className="text-sm bg-warning-subtle text-warning rounded-lg px-3 py-2">
           All {MAX_ACTIVE_HABITS} habit slots are used. Deactivate one to add another.
         </p>
       )}
@@ -30,13 +30,13 @@ export function AddHabitForm({ onAdd, capReached }: AddHabitFormProps) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="New habit name…"
-          className="flex-1 bg-gray-800 text-sm text-white rounded px-3 py-2 placeholder-gray-500 border border-gray-600 focus:outline-none focus:border-gray-400"
+          className="flex-1 bg-surface-raised text-sm text-on-surface rounded-lg px-3 py-2 placeholder:text-on-surface-faint border border-border focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
         />
         <button
           type="submit"
           disabled={capReached}
           aria-label="Add Habit"
-          className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed rounded"
+          className="px-3 py-2 text-sm bg-accent text-on-accent rounded-lg hover:bg-accent-hover active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Add Habit
         </button>

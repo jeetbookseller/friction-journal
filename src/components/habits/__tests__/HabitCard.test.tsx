@@ -157,4 +157,89 @@ describe('HabitCard', () => {
     const toggleBtn = screen.getByRole('button', { name: /toggle today/i });
     expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
   });
+
+  // RWP-4 redesign tests
+  it('day dots have rounded-sm class (squares, not circles)', () => {
+    const { container } = render(
+      <HabitCard
+        habit={makeHabit()}
+        logs={[]}
+        today="2026-03-15"
+        onToggleToday={vi.fn()}
+        onDeactivate={vi.fn()}
+      />,
+    );
+    const dots = container.querySelectorAll('.rounded-sm');
+    expect(dots.length).toBeGreaterThanOrEqual(14);
+  });
+
+  it('completed dot has bg-success class', () => {
+    const { container } = render(
+      <HabitCard
+        habit={makeHabit({ uuid: 'habit-uuid-1' })}
+        logs={[makeLog('2026-03-15', 1)]}
+        today="2026-03-15"
+        onToggleToday={vi.fn()}
+        onDeactivate={vi.fn()}
+      />,
+    );
+    const completedDot = container.querySelector('[aria-label="2026-03-15"]');
+    expect(completedDot).toHaveClass('bg-success');
+  });
+
+  it('incomplete dot has bg-surface-overlay class', () => {
+    const { container } = render(
+      <HabitCard
+        habit={makeHabit()}
+        logs={[]}
+        today="2026-03-15"
+        onToggleToday={vi.fn()}
+        onDeactivate={vi.fn()}
+      />,
+    );
+    const incompleteDot = container.querySelector('[aria-label="2026-03-15"]');
+    expect(incompleteDot).toHaveClass('bg-surface-overlay');
+  });
+
+  it('Test Run badge has rounded-full class', () => {
+    render(
+      <HabitCard
+        habit={makeHabit({ created_at: Date.now() })}
+        logs={[]}
+        today="2026-03-15"
+        onToggleToday={vi.fn()}
+        onDeactivate={vi.fn()}
+      />,
+    );
+    const badge = screen.getByText(/test run/i);
+    expect(badge).toHaveClass('rounded-full');
+  });
+
+  it('today toggle has bg-success class when completed', () => {
+    render(
+      <HabitCard
+        habit={makeHabit({ uuid: 'habit-uuid-1' })}
+        logs={[makeLog('2026-03-15', 1)]}
+        today="2026-03-15"
+        onToggleToday={vi.fn()}
+        onDeactivate={vi.fn()}
+      />,
+    );
+    const btn = screen.getByRole('button', { name: /toggle today/i });
+    expect(btn).toHaveClass('bg-success');
+  });
+
+  it('today toggle has bg-surface-overlay class when not completed', () => {
+    render(
+      <HabitCard
+        habit={makeHabit()}
+        logs={[]}
+        today="2026-03-15"
+        onToggleToday={vi.fn()}
+        onDeactivate={vi.fn()}
+      />,
+    );
+    const btn = screen.getByRole('button', { name: /toggle today/i });
+    expect(btn).toHaveClass('bg-surface-overlay');
+  });
 });
