@@ -43,4 +43,23 @@ describe('AddHabitForm', () => {
     render(<AddHabitForm onAdd={vi.fn()} capReached={true} />);
     expect(screen.getByText(/3 habit slots/i)).toBeInTheDocument();
   });
+
+  // RWP-4 redesign tests
+  it('cap warning has bg-warning-subtle class', () => {
+    render(<AddHabitForm onAdd={vi.fn()} capReached={true} />);
+    const warning = screen.getByText(/3 habit slots/i);
+    expect(warning).toHaveClass('bg-warning-subtle');
+  });
+
+  it('cap warning has text-warning class', () => {
+    render(<AddHabitForm onAdd={vi.fn()} capReached={true} />);
+    const warning = screen.getByText(/3 habit slots/i);
+    expect(warning).toHaveClass('text-warning');
+  });
+
+  it('cap warning has rounded-lg class', () => {
+    render(<AddHabitForm onAdd={vi.fn()} capReached={true} />);
+    const warning = screen.getByText(/3 habit slots/i);
+    expect(warning).toHaveClass('rounded-lg');
+  });
 });
