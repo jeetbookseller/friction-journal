@@ -7,6 +7,12 @@ const TAGS: { value: RapidLog['tag']; label: string }[] = [
   { value: 'mood',  label: 'Mood' },
 ];
 
+const TAG_ACTIVE_STYLES: Record<RapidLog['tag'], string> = {
+  note:  'bg-tag-note text-on-accent',
+  event: 'bg-tag-event text-on-accent',
+  mood:  'bg-tag-mood text-on-accent',
+};
+
 interface AddRapidLogFormProps {
   onAdd: (tag: RapidLog['tag'], body: string) => void;
 }
@@ -24,7 +30,7 @@ export function AddRapidLogForm({ onAdd }: AddRapidLogFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 p-3 border-t border-gray-700">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2 p-3 border-t border-border">
       <div className="flex gap-2">
         {TAGS.map(({ value, label }) => (
           <button
@@ -33,10 +39,10 @@ export function AddRapidLogForm({ onAdd }: AddRapidLogFormProps) {
             aria-pressed={tag === value}
             onClick={() => setTag(value)}
             className={[
-              'rounded px-2.5 py-1 text-xs font-medium',
+              'rounded-full px-3 py-1 text-xs font-medium',
               tag === value
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600',
+                ? TAG_ACTIVE_STYLES[value]
+                : 'bg-surface-overlay text-on-surface-muted hover:bg-accent-subtle',
             ].join(' ')}
           >
             {label}
@@ -50,11 +56,11 @@ export function AddRapidLogForm({ onAdd }: AddRapidLogFormProps) {
           onChange={(e) => setBody(e.target.value)}
           placeholder="Log something..."
           maxLength={280}
-          className="flex-1 rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="flex-1 rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm text-on-surface placeholder:text-on-surface-faint focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
         />
         <button
           type="submit"
-          className="rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:bg-accent-hover active:scale-95"
         >
           Add
         </button>

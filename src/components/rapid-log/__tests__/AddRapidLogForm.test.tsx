@@ -39,6 +39,54 @@ describe('AddRapidLogForm', () => {
     expect(screen.getByRole('button', { name: /^Mood$/i })).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('active note tag button uses bg-tag-note class', () => {
+    render(<AddRapidLogForm onAdd={vi.fn()} />);
+    const noteBtn = screen.getByRole('button', { name: /^Note$/i });
+    expect(noteBtn.className).toMatch(/bg-tag-note\b/);
+  });
+
+  it('active event tag button uses bg-tag-event class', async () => {
+    render(<AddRapidLogForm onAdd={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /^Event$/i }));
+    const eventBtn = screen.getByRole('button', { name: /^Event$/i });
+    expect(eventBtn.className).toMatch(/bg-tag-event\b/);
+  });
+
+  it('active mood tag button uses bg-tag-mood class', async () => {
+    render(<AddRapidLogForm onAdd={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /^Mood$/i }));
+    const moodBtn = screen.getByRole('button', { name: /^Mood$/i });
+    expect(moodBtn.className).toMatch(/bg-tag-mood\b/);
+  });
+
+  it('inactive tag buttons use bg-surface-overlay class', async () => {
+    render(<AddRapidLogForm onAdd={vi.fn()} />);
+    const eventBtn = screen.getByRole('button', { name: /^Event$/i });
+    expect(eventBtn.className).toMatch(/bg-surface-overlay/);
+  });
+
+  it('tag buttons are rounded-full', () => {
+    render(<AddRapidLogForm onAdd={vi.fn()} />);
+    const noteBtn = screen.getByRole('button', { name: /^Note$/i });
+    expect(noteBtn.className).toMatch(/rounded-full/);
+  });
+
+  it('submit button uses bg-accent and text-on-accent and rounded-lg classes', () => {
+    render(<AddRapidLogForm onAdd={vi.fn()} />);
+    const addBtn = screen.getByRole('button', { name: /^Add$/i });
+    expect(addBtn.className).toMatch(/bg-accent\b/);
+    expect(addBtn.className).toMatch(/text-on-accent/);
+    expect(addBtn.className).toMatch(/rounded-lg/);
+  });
+
+  it('input uses bg-surface-raised and border-border and rounded-lg classes', () => {
+    render(<AddRapidLogForm onAdd={vi.fn()} />);
+    const input = screen.getByRole('textbox');
+    expect(input.className).toMatch(/bg-surface-raised/);
+    expect(input.className).toMatch(/border-border/);
+    expect(input.className).toMatch(/rounded-lg/);
+  });
+
   it('calls onAdd with (tag, trimmedBody) on submit', async () => {
     const onAdd = vi.fn();
     render(<AddRapidLogForm onAdd={onAdd} />);
