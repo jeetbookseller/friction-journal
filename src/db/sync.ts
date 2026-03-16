@@ -1,11 +1,5 @@
 /**
- * Supabase Sync — Stub / Scaffold
- *
- * ## Sync Architecture: Last-Write-Wins (LWW)
- *
- * LWW was chosen for simplicity in a single-user, offline-first app.
- * The device with the highest `updated_at` timestamp wins any conflict.
- * This is safe because only one user owns all data (no multi-user auth in v1).
+ * Supabase Sync — Last-Write-Wins (LWW)
  *
  * ## Sync Flow: pull → apply → push → confirm
  *
@@ -26,20 +20,21 @@
  * ## Soft-Delete Pattern
  *
  * Rows are never hard-deleted. Instead, `deleted_at` is set to an epoch ms
- * timestamp. This ensures deletions propagate correctly — a deleted row on
- * one device will sync to all devices via the normal LWW pull/push cycle.
- * The local UI filters out rows where `deleted_at !== null`.
+ * timestamp. This ensures deletions propagate correctly across devices via
+ * the normal LWW pull/push cycle.
  *
- * ## Alternative: Field-Level Merge
+ * ## No-op when unconfigured
  *
- * A more sophisticated strategy would merge individual fields rather than
- * entire rows. For example, if two devices edit different fields of the same
- * Action simultaneously, field-level merge would preserve both changes.
- * This is not implemented because:
- *   - Single-user apps rarely experience true concurrent edits
- *   - It requires tracking per-field timestamps (significant schema complexity)
- *   - LWW is sufficient for the use cases this app targets
+ * If VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are absent, returns
+ * { pulled: 0, pushed: 0, conflicts: 0 } immediately — the app stays
+ * fully offline-only with no errors.
  */
+
+import type { Table } from 'dexie';
+import { supabase } from '../lib/supabase';
+import { db } from './database';
+
+const SYNC_KEY = 'last_sync_timestamp';
 
 export interface SyncResult {
   /** Number of remote rows fetched and applied locally */
@@ -52,42 +47,77 @@ export interface SyncResult {
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'success';
 
+type WithId = { id?: number; uuid: string; updated_at: number };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function applyTable<T extends WithId>(
+  table: Table<any, any, any>,
+  remoteRows: T[] | null,
+  conflicts: { count: number },
+): Promise<number> {
+  if (!remoteRows?.length) return 0;
+  let pulled = 0;
+  for (const row of remoteRows) {
+    const local = await table.where('uuid').equals(row.uuid).first();
+    if (!local || row.updated_at > local.updated_at) {
+      if (local) conflicts.count++;
+      await table.put({ ...row, id: local?.id });
+      pulled++;
+    }
+  }
+  return pulled;
+}
+
 /**
  * Synchronize local IndexedDB with Supabase.
  *
- * Currently a no-op stub. When Supabase credentials are available
- * (VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY), replace the TODO
- * sections below with the full pull → apply → push → confirm implementation.
- *
- * @returns SyncResult with counts of pulled, pushed, and resolved conflicts
+ * Returns immediately with zero counts if Supabase is not configured.
+ * Throws on network or API errors so callers can show error UI.
  */
 export async function syncWithSupabase(): Promise<SyncResult> {
-  // TODO: Check if Supabase is configured
-  //   const url = import.meta.env.VITE_SUPABASE_URL;
-  //   const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  //   if (!url || !key) return { pulled: 0, pushed: 0, conflicts: 0 };
+  if (!supabase) return { pulled: 0, pushed: 0, conflicts: 0 };
 
-  // TODO: Step 1 — Pull
-  //   const lastSync = Number(localStorage.getItem('last_sync_timestamp') ?? '0');
-  //   const { data } = await supabase.rpc('pull_changes', { since: lastSync });
+  const lastSync = Number(localStorage.getItem(SYNC_KEY) ?? '0');
+  let pulled = 0;
+  let pushed = 0;
+  const conflicts = { count: 0 };
 
-  // TODO: Step 2 — Apply (LWW per table, keyed by uuid)
-  //   for (const row of data.actions) {
-  //     const local = await db.actions.where({ uuid: row.uuid }).first();
-  //     if (!local || row.updated_at > local.updated_at) {
-  //       await db.actions.put(row);
-  //       if (local) conflicts++;
-  //     }
-  //   }
-  //   // ... repeat for timeline_events, habits, habit_logs, rapid_logs
+  // Step 1 — Pull
+  const { data, error } = await supabase.rpc('pull_changes', { since: lastSync });
+  if (error) throw new Error(`Sync pull failed: ${error.message}`);
 
-  // TODO: Step 3 — Push
-  //   const localChanges = await db.actions.where('updated_at').above(lastSync).toArray();
-  //   await supabase.from('actions').upsert(localChanges, { onConflict: 'uuid' });
-  //   // ... repeat for all tables
+  // Step 2 — Apply (LWW per table)
+  pulled += await applyTable(db.actions, data.actions, conflicts);
+  pulled += await applyTable(db.timeline_events, data.timeline_events, conflicts);
+  pulled += await applyTable(db.habits, data.habits, conflicts);
+  pulled += await applyTable(db.habit_logs, data.habit_logs, conflicts);
+  pulled += await applyTable(db.rapid_logs, data.rapid_logs, conflicts);
 
-  // TODO: Step 4 — Confirm
-  //   localStorage.setItem('last_sync_timestamp', String(Date.now()));
+  // Step 3 — Push (upsert local changes since lastSync)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tablePairs = [
+    [db.actions, 'actions'],
+    [db.timeline_events, 'timeline_events'],
+    [db.habits, 'habits'],
+    [db.habit_logs, 'habit_logs'],
+    [db.rapid_logs, 'rapid_logs'],
+  ] as [any, string][];
 
-  return { pulled: 0, pushed: 0, conflicts: 0 };
+  for (const [table, name] of tablePairs) {
+    const localChanges = await table.where('updated_at').above(lastSync).toArray();
+    if (localChanges.length) {
+      // Strip Dexie's auto-increment `id` — Supabase uses its own serial id
+      const rows = localChanges.map(({ id: _id, ...row }: WithId) => row);
+      const { error: pushErr } = await supabase
+        .from(name)
+        .upsert(rows, { onConflict: 'uuid' });
+      if (pushErr) throw new Error(`Sync push failed for ${name}: ${pushErr.message}`);
+      pushed += localChanges.length;
+    }
+  }
+
+  // Step 4 — Confirm
+  localStorage.setItem(SYNC_KEY, String(Date.now()));
+
+  return { pulled, pushed, conflicts: conflicts.count };
 }

@@ -23,7 +23,7 @@ describe('syncWithSupabase', () => {
     expect(result).toHaveProperty('conflicts');
   });
 
-  it('returns zero counts as a no-op stub', async () => {
+  it('returns zero counts when Supabase is not configured', async () => {
     const result = await syncWithSupabase();
     expect(result.pulled).toBe(0);
     expect(result.pushed).toBe(0);
