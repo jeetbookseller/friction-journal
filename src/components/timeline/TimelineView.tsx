@@ -37,25 +37,33 @@ export function TimelineView({ initialYear, initialMonth }: TimelineViewProps = 
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+    <div className="flex flex-col h-full animate-fade-in">
+      <div className="flex items-center justify-between px-4 py-3 bg-surface sticky top-0 z-10 border-b border-border">
         <button
           aria-label="Previous month"
           onClick={goToPrev}
-          className="px-2 py-1 text-gray-400 hover:text-gray-200"
+          className="p-2 rounded-lg text-on-surface-muted hover:bg-surface-overlay transition-colors"
         >
-          ←
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+               stroke="currentColor" strokeWidth="1.5"
+               strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12.5 15l-5-5 5-5" />
+          </svg>
         </button>
-        <span className="font-semibold text-gray-200">{headerLabel}</span>
+        <span className="font-semibold text-on-surface">{headerLabel}</span>
         <button
           aria-label="Next month"
           onClick={goToNext}
-          className="px-2 py-1 text-gray-400 hover:text-gray-200"
+          className="p-2 rounded-lg text-on-surface-muted hover:bg-surface-overlay transition-colors"
         >
-          →
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+               stroke="currentColor" strokeWidth="1.5"
+               strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7.5 5l5 5-5 5" />
+          </svg>
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-800">
+      <div className="flex-1 overflow-y-auto divide-y divide-border">
         {dates.map((date) => (
           <div key={date} data-testid={`day-${date}`}>
             <TimelineDay

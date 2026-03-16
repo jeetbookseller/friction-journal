@@ -74,6 +74,30 @@ describe('TimelineView', () => {
     expect(useTimelineModule.useTimelineForMonth).toHaveBeenCalledWith(2026, 4);
   });
 
+  it('root element has animate-fade-in class', () => {
+    const { container } = render(<TimelineView initialYear={2026} initialMonth={3} />);
+    expect(container.firstChild).toHaveClass('animate-fade-in');
+  });
+
+  it('prev button contains an SVG icon', () => {
+    render(<TimelineView initialYear={2026} initialMonth={3} />);
+    const prev = screen.getByRole('button', { name: /previous/i });
+    expect(prev.querySelector('svg')).not.toBeNull();
+  });
+
+  it('next button contains an SVG icon', () => {
+    render(<TimelineView initialYear={2026} initialMonth={3} />);
+    const next = screen.getByRole('button', { name: /next/i });
+    expect(next.querySelector('svg')).not.toBeNull();
+  });
+
+  it('header has sticky and border-b classes', () => {
+    render(<TimelineView initialYear={2026} initialMonth={3} />);
+    const header = screen.getByText('March 2026').closest('div');
+    expect(header).toHaveClass('sticky');
+    expect(header).toHaveClass('border-b');
+  });
+
   it('passes matching event from Map to the correct day row', () => {
     const events = new Map<string, TimelineEvent>();
     events.set('2026-03-15', {

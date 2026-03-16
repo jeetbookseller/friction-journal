@@ -26,8 +26,8 @@ describe('TimelineDay', () => {
         onUpsert={vi.fn()}
       />
     );
-    // March 15, 2026 is a Sunday
-    expect(screen.getByText('15 Sun')).toBeInTheDocument();
+    // March 15, 2026 is a Sunday — label split across styled spans
+    expect(screen.getByText((_, el) => el?.tagName === 'SPAN' && el?.textContent === '15 Sun')).toBeInTheDocument();
   });
 
   it('renders correct day name for another date', () => {
@@ -38,8 +38,8 @@ describe('TimelineDay', () => {
         onUpsert={vi.fn()}
       />
     );
-    // March 1, 2026 is a Sunday
-    expect(screen.getByText('1 Sun')).toBeInTheDocument();
+    // March 1, 2026 is a Sunday — label split across styled spans
+    expect(screen.getByText((_, el) => el?.tagName === 'SPAN' && el?.textContent === '1 Sun')).toBeInTheDocument();
   });
 
   it('shows a single-line input when no event exists', () => {
@@ -168,5 +168,39 @@ describe('TimelineDay', () => {
       />
     );
     expect(container.firstChild).not.toHaveClass('today');
+  });
+
+  it("today's row has bg-accent-subtle class", () => {
+    const { container } = render(
+      <TimelineDay date="2026-03-15" isToday={true} onUpsert={vi.fn()} />
+    );
+    expect(container.firstChild).toHaveClass('bg-accent-subtle');
+  });
+
+  it("non-today row does not have bg-accent-subtle class", () => {
+    const { container } = render(
+      <TimelineDay date="2026-03-15" isToday={false} onUpsert={vi.fn()} />
+    );
+    expect(container.firstChild).not.toHaveClass('bg-accent-subtle');
+  });
+
+  it('row with an event has border-l-2 left accent class', () => {
+    const { container } = render(
+      <TimelineDay date="2026-03-15" event={makeEvent()} isToday={false} onUpsert={vi.fn()} />
+    );
+    expect(container.firstChild).toHaveClass('border-l-2');
+  });
+
+  it('row without an event does not have border-l-2 class', () => {
+    const { container } = render(
+      <TimelineDay date="2026-03-15" isToday={false} onUpsert={vi.fn()} />
+    );
+    expect(container.firstChild).not.toHaveClass('border-l-2');
+  });
+
+  it('day number span has font-semibold class', () => {
+    render(<TimelineDay date="2026-03-15" isToday={false} onUpsert={vi.fn()} />);
+    const dayNumEl = screen.getByText('15');
+    expect(dayNumEl).toHaveClass('font-semibold');
   });
 });
