@@ -57,9 +57,39 @@ describe('RapidLogFeed', () => {
     expect(within(getFilterToolbar()).getByRole('button', { name: /^All$/i })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('shows empty state when no logs exist', () => {
+  it('active filter chip has bg-accent and text-on-accent and rounded-full classes', () => {
     render(<RapidLogFeed />);
-    expect(screen.getByText(/no entries yet/i)).toBeInTheDocument();
+    const allChip = within(getFilterToolbar()).getByRole('button', { name: /^All$/i });
+    expect(allChip.className).toMatch(/bg-accent/);
+    expect(allChip.className).toMatch(/text-on-accent/);
+    expect(allChip.className).toMatch(/rounded-full/);
+  });
+
+  it('inactive filter chip has bg-surface-overlay and text-on-surface-muted and rounded-full classes', () => {
+    render(<RapidLogFeed />);
+    const noteChip = within(getFilterToolbar()).getByRole('button', { name: /^Note$/i });
+    expect(noteChip.className).toMatch(/bg-surface-overlay/);
+    expect(noteChip.className).toMatch(/text-on-surface-muted/);
+    expect(noteChip.className).toMatch(/rounded-full/);
+  });
+
+  it('root element has animate-fade-in class', () => {
+    const { container } = render(<RapidLogFeed />);
+    expect(container.firstChild).toHaveClass('animate-fade-in');
+  });
+
+  it('filter header has sticky and border-b and border-border and bg-surface classes', () => {
+    render(<RapidLogFeed />);
+    const toolbar = getFilterToolbar();
+    expect(toolbar.className).toMatch(/sticky/);
+    expect(toolbar.className).toMatch(/border-b/);
+    expect(toolbar.className).toMatch(/border-border/);
+    expect(toolbar.className).toMatch(/bg-surface/);
+  });
+
+  it('shows empty state with "No log entries yet" when no logs exist', () => {
+    render(<RapidLogFeed />);
+    expect(screen.getByText(/no log entries yet/i)).toBeInTheDocument();
   });
 
   it('renders log entries when logs exist', () => {
@@ -70,6 +100,18 @@ describe('RapidLogFeed', () => {
     render(<RapidLogFeed />);
     expect(screen.getByText('First entry')).toBeInTheDocument();
     expect(screen.getByText('Second entry')).toBeInTheDocument();
+  });
+
+  it('log entries have staggered animation-delay via AnimatedList', () => {
+    mockLogs = [
+      makeRapidLog({ id: 1, body: 'First entry', tag: 'note' }),
+      makeRapidLog({ id: 2, body: 'Second entry', tag: 'event' }),
+    ];
+    render(<RapidLogFeed />);
+    const items = screen.getAllByRole('listitem');
+    // AnimatedList clones children with incrementing animation-delay
+    expect(items[0]).toHaveStyle({ animationDelay: '0ms' });
+    expect(items[1]).toHaveStyle({ animationDelay: '50ms' });
   });
 
   it('clicking a tag chip makes it active', async () => {

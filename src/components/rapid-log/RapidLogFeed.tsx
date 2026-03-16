@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useRapidLogs } from '../../hooks/useRapidLogs';
 import { RapidLogEntry } from './RapidLogEntry';
 import { AddRapidLogForm } from './AddRapidLogForm';
+import { EmptyState } from '../ui/EmptyState';
+import { AnimatedList } from '../ui/AnimatedList';
 import type { RapidLog } from '../../db/models';
 
 const FILTER_CHIPS: { value: RapidLog['tag'] | undefined; label: string }[] = [
@@ -11,6 +13,13 @@ const FILTER_CHIPS: { value: RapidLog['tag'] | undefined; label: string }[] = [
   { value: 'mood',    label: 'Mood' },
 ];
 
+const PenIcon = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+  </svg>
+);
+
 export function RapidLogFeed() {
   const [filter, setFilter] = useState<RapidLog['tag'] | undefined>(undefined);
   const { logs, addRapidLog, deleteRapidLog } = useRapidLogs(filter);
@@ -19,9 +28,13 @@ export function RapidLogFeed() {
   const displayLogs = [...logs].reverse();
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="animate-fade-in flex flex-col h-full">
       {/* Filter chips */}
-      <div role="toolbar" aria-label="Filter logs" className="flex gap-2 p-3 border-b border-gray-700">
+      <div
+        role="toolbar"
+        aria-label="Filter logs"
+        className="bg-surface sticky top-0 z-10 border-b border-border flex gap-2 p-3"
+      >
         {FILTER_CHIPS.map(({ value, label }) => (
           <button
             key={label}
@@ -29,10 +42,10 @@ export function RapidLogFeed() {
             aria-pressed={filter === value}
             onClick={() => setFilter(value)}
             className={[
-              'rounded px-2.5 py-1 text-xs font-medium',
+              'rounded-full px-3 py-1 text-xs font-medium',
               filter === value
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600',
+                ? 'bg-accent text-on-accent'
+                : 'bg-surface-overlay text-on-surface-muted hover:bg-accent-subtle',
             ].join(' ')}
           >
             {label}
@@ -43,16 +56,20 @@ export function RapidLogFeed() {
       {/* Log entries — scrollable */}
       <div className="flex-1 overflow-y-auto">
         {displayLogs.length === 0 ? (
-          <p className="p-4 text-sm text-gray-500">
-            No entries yet. Add your first log below.
-          </p>
+          <EmptyState
+            icon={<PenIcon />}
+            title="No log entries yet"
+            description="Add your first log below."
+          />
         ) : (
           <ul>
-            {displayLogs.map((log) => (
-              <li key={log.id} className="border-b border-gray-800">
-                <RapidLogEntry entry={log} onDelete={deleteRapidLog} />
-              </li>
-            ))}
+            <AnimatedList>
+              {displayLogs.map((log) => (
+                <li key={log.id} className="animate-slide-up border-b border-border">
+                  <RapidLogEntry entry={log} onDelete={deleteRapidLog} />
+                </li>
+              ))}
+            </AnimatedList>
           </ul>
         )}
       </div>

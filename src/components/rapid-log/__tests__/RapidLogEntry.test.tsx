@@ -38,22 +38,31 @@ describe('RapidLogEntry', () => {
     expect(screen.getByText('Mood')).toBeInTheDocument();
   });
 
-  it('note tag pill has blue color classes', () => {
+  it('note tag pill uses bg-tag-note-subtle and text-tag-note token classes', () => {
     render(<RapidLogEntry entry={makeRapidLog({ tag: 'note' })} onDelete={vi.fn()} />);
     const pill = screen.getByText('Note');
-    expect(pill.className).toMatch(/blue/);
+    expect(pill.className).toMatch(/bg-tag-note-subtle/);
+    expect(pill.className).toMatch(/text-tag-note/);
   });
 
-  it('event tag pill has green color classes', () => {
+  it('event tag pill uses bg-tag-event-subtle and text-tag-event token classes', () => {
     render(<RapidLogEntry entry={makeRapidLog({ tag: 'event' })} onDelete={vi.fn()} />);
     const pill = screen.getByText('Event');
-    expect(pill.className).toMatch(/green/);
+    expect(pill.className).toMatch(/bg-tag-event-subtle/);
+    expect(pill.className).toMatch(/text-tag-event/);
   });
 
-  it('mood tag pill has purple color classes', () => {
+  it('mood tag pill uses bg-tag-mood-subtle and text-tag-mood token classes', () => {
     render(<RapidLogEntry entry={makeRapidLog({ tag: 'mood' })} onDelete={vi.fn()} />);
     const pill = screen.getByText('Mood');
-    expect(pill.className).toMatch(/purple/);
+    expect(pill.className).toMatch(/bg-tag-mood-subtle/);
+    expect(pill.className).toMatch(/text-tag-mood/);
+  });
+
+  it('tag pill is rounded-full', () => {
+    render(<RapidLogEntry entry={makeRapidLog({ tag: 'note' })} onDelete={vi.fn()} />);
+    const pill = screen.getByText('Note');
+    expect(pill.className).toMatch(/rounded-full/);
   });
 
   it('renders a non-empty relative timestamp', () => {
@@ -61,6 +70,12 @@ describe('RapidLogEntry', () => {
     // The timestamp element should have some text (e.g. "less than a minute ago")
     const timestamp = screen.getByTestId('relative-timestamp');
     expect(timestamp.textContent).toBeTruthy();
+  });
+
+  it('delete button contains an SVG icon', () => {
+    render(<RapidLogEntry entry={makeRapidLog()} onDelete={vi.fn()} />);
+    const deleteBtn = screen.getByRole('button', { name: /delete log entry/i });
+    expect(deleteBtn.querySelector('svg')).toBeInTheDocument();
   });
 
   it('calls onDelete with entry id when delete button is clicked', async () => {
