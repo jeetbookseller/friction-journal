@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActionList } from '../ActionList';
 import * as useActionsModule from '../../../hooks/useActions';
+import * as ToastContextModule from '../../ui/ToastContext';
+import { ToastProvider } from '../../ui/ToastContext';
 import type { Action } from '../../../db/models';
 
 vi.mock('../../../hooks/useActions');
@@ -36,32 +38,35 @@ function mockHook(overrides: Partial<ReturnType<typeof useActionsModule.useActio
   });
 }
 
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+}
+
 beforeEach(() => {
   mockHook();
 });
 
 describe('ActionList', () => {
   it('renders a date header', () => {
-    render(<ActionList />);
-    // Should contain a date string (any date header is fine)
+    renderWithProvider(<ActionList />);
     expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 
   it('renders priority count indicator', () => {
     mockHook({ priorityCount: 2 });
-    render(<ActionList />);
+    renderWithProvider(<ActionList />);
     expect(screen.getByText(/2\/3 priorities/i)).toBeInTheDocument();
   });
 
   it('renders 0 priority count when no priorities', () => {
     mockHook({ priorityCount: 0 });
-    render(<ActionList />);
+    renderWithProvider(<ActionList />);
     expect(screen.getByText(/0\/3 priorities/i)).toBeInTheDocument();
   });
 
   it('renders empty state when no actions', () => {
     mockHook({ actions: [] });
-    render(<ActionList />);
+    renderWithProvider(<ActionList />);
     expect(screen.getByText(/no actions/i)).toBeInTheDocument();
   });
 
@@ -72,13 +77,13 @@ describe('ActionList', () => {
         makeAction({ id: 2, title: 'Second task' }),
       ],
     });
-    render(<ActionList />);
+    renderWithProvider(<ActionList />);
     expect(screen.getByText('First task')).toBeInTheDocument();
     expect(screen.getByText('Second task')).toBeInTheDocument();
   });
 
   it('renders the AddActionForm', () => {
-    render(<ActionList />);
+    renderWithProvider(<ActionList />);
     expect(screen.getByRole('textbox')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
   });
@@ -86,7 +91,7 @@ describe('ActionList', () => {
   it('calls addAction when form is submitted', async () => {
     const addActionMock = vi.fn();
     mockHook({ addAction: addActionMock });
-    render(<ActionList />);
+    renderWithProvider(<ActionList />);
     await userEvent.type(screen.getByRole('textbox'), 'New task');
     await userEvent.click(screen.getByRole('button', { name: /add/i }));
     expect(addActionMock).toHaveBeenCalledWith('New task');
@@ -97,7 +102,7 @@ describe('ActionList', () => {
       priorityCount: 3,
       actions: [makeAction({ id: 1, is_top_priority: 0, title: 'Non-priority' })],
     });
-    render(<ActionList />);
+    renderWithProvider(<ActionList />);
     expect(screen.getByRole('button', { name: /priority/i })).toBeDisabled();
   });
 
@@ -106,7 +111,31 @@ describe('ActionList', () => {
       priorityCount: 2,
       actions: [makeAction({ id: 1, is_top_priority: 0, title: 'Task' })],
     });
-    render(<ActionList />);
+    renderWithProvider(<ActionList />);
     expect(screen.getByRole('button', { name: /priority/i })).not.toBeDisabled();
+  });
+
+  it('shows a toast after adding an action', async () => {
+    const showToastMock = vi.fn();
+    vi.spyOn(ToastContextModule, 'useToast').mockReturnValue({ showToast: showToastMock });
+    const addActionMock = vi.fn().mockResolvedValue(undefined);
+    mockHook({ addAction: addActionMock });
+    renderWithProvider(<ActionList />);
+    await userEvent.type(screen.getByRole('textbox'), 'New task');
+    await userEvent.click(screen.getByRole('button', { name: /add/i }));
+    expect(showToastMock).toHaveBeenCalledWith('Action added');
+  });
+
+  it('shows a toast after deleting an action', async () => {
+    const showToastMock = vi.fn();
+    vi.spyOn(ToastContextModule, 'useToast').mockReturnValue({ showToast: showToastMock });
+    const deleteActionMock = vi.fn().mockResolvedValue(undefined);
+    mockHook({
+      actions: [makeAction({ id: 5, title: 'Task to delete' })],
+      deleteAction: deleteActionMock,
+    });
+    renderWithProvider(<ActionList />);
+    await userEvent.click(screen.getByRole('button', { name: /delete/i }));
+    expect(showToastMock).toHaveBeenCalledWith('Action deleted');
   });
 });
