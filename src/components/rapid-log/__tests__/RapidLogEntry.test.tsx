@@ -8,11 +8,14 @@ function makeRapidLog(overrides: Partial<RapidLog> = {}): RapidLog {
   return {
     id: 1,
     uuid: 'test-uuid',
+    user_id: 'test-user-id',
     tag: 'note',
     body: 'Test log entry',
     created_at: Date.now(),
     updated_at: Date.now(),
     deleted_at: null,
+    sent_to_ph: 0,
+    sent_to_ph_at: null,
     ...overrides,
   };
 }

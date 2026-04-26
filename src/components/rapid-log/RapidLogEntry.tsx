@@ -10,10 +10,18 @@ const TAG_STYLES: Record<RapidLog['tag'], { pill: string; label: string }> = {
 interface RapidLogEntryProps {
   entry: RapidLog;
   onDelete: (id: number) => void;
+  onSendToWork?: (entry: RapidLog) => void;
+  isSending?: boolean;
 }
 
-export function RapidLogEntry({ entry, onDelete }: RapidLogEntryProps) {
+export function RapidLogEntry({
+  entry,
+  onDelete,
+  onSendToWork = () => {},
+  isSending = false,
+}: RapidLogEntryProps) {
   const { pill, label } = TAG_STYLES[entry.tag];
+  const alreadySent = entry.sent_to_ph === 1;
 
   return (
     <div className="group flex items-start gap-2 py-2 px-3">
@@ -28,6 +36,27 @@ export function RapidLogEntry({ entry, onDelete }: RapidLogEntryProps) {
         {formatDistanceToNow(entry.created_at, { addSuffix: true })}
       </span>
       <button
+        aria-label={alreadySent ? 'Already sent to Work' : 'Send to Work'}
+        title={alreadySent ? 'Sent to Work' : 'Send to Work'}
+        disabled={alreadySent || isSending}
+        onClick={() => onSendToWork(entry)}
+        className={[
+          'shrink-0 transition-colors',
+          alreadySent
+            ? 'text-accent'
+            : 'opacity-0 group-hover:opacity-100 text-on-surface-faint hover:text-accent transition-opacity',
+          alreadySent || isSending ? 'cursor-default' : '',
+        ].filter(Boolean).join(' ')}
+      >
+        {alreadySent ? (
+          <CheckIcon width={14} height={14} />
+        ) : isSending ? (
+          <SpinnerIcon width={14} height={14} />
+        ) : (
+          <BriefcaseIcon width={14} height={14} />
+        )}
+      </button>
+      <button
         aria-label="Delete log entry"
         onClick={() => onDelete(entry.id!)}
         className="opacity-0 group-hover:opacity-100 shrink-0 text-on-surface-faint hover:text-danger transition-opacity"
@@ -40,5 +69,33 @@ export function RapidLogEntry({ entry, onDelete }: RapidLogEntryProps) {
         </svg>
       </button>
     </div>
+  );
+}
+
+function BriefcaseIcon({ width = 16, height = 16 }: { width?: number; height?: number }) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" />
+    </svg>
+  );
+}
+
+function CheckIcon({ width = 16, height = 16 }: { width?: number; height?: number }) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function SpinnerIcon({ width = 16, height = 16 }: { width?: number; height?: number }) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2" className="animate-spin">
+      <path d="M21 12a9 9 0 11-6.219-8.56" />
+    </svg>
   );
 }
