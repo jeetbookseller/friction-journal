@@ -13,6 +13,27 @@ vi.mock('../../AuthProvider', () => ({
   }),
 }));
 
+const mockShowToast = vi.fn();
+vi.mock('../../ui/ToastContext', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}));
+
+vi.mock('../../../lib/sendToProductivityHub', () => ({
+  sendToProductivityHub: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+vi.mock('../../../db/database', () => ({
+  db: {
+    rapid_logs: {
+      where: vi.fn().mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          modify: vi.fn().mockResolvedValue(undefined),
+        }),
+      }),
+    },
+  },
+}));
+
 // Mock the hook so RapidLogFeed tests don't need IndexedDB
 const mockAddRapidLog = vi.fn();
 const mockDeleteRapidLog = vi.fn();
@@ -49,6 +70,7 @@ beforeEach(() => {
   mockLogs = [];
   mockAddRapidLog.mockReset();
   mockDeleteRapidLog.mockReset();
+  mockShowToast.mockReset();
 });
 
 describe('RapidLogFeed', () => {

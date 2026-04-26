@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useRapidLogs } from '../../hooks/useRapidLogs';
 import { useAuthContext } from '../AuthProvider';
+import { useToast } from '../ui/ToastContext';
+import { sendToProductivityHub } from '../../lib/sendToProductivityHub';
+import { db } from '../../db/database';
 import { RapidLogEntry } from './RapidLogEntry';
 import { AddRapidLogForm } from './AddRapidLogForm';
 import { EmptyState } from '../ui/EmptyState';
@@ -26,6 +29,27 @@ export function RapidLogFeed() {
   const { session } = useAuthContext();
   const userId = session!.user.id;
   const { logs, addRapidLog, deleteRapidLog } = useRapidLogs(userId, filter);
+  const { showToast } = useToast();
+  const [sendingUuid, setSendingUuid] = useState<string | null>(null);
+
+  const handleSendToWork = async (entry: RapidLog) => {
+    if (!session || entry.sent_to_ph === 1 || sendingUuid !== null) return;
+    setSendingUuid(entry.uuid);
+    try {
+      const result = await sendToProductivityHub(entry.body, session.user.id);
+      if (result.success) {
+        const now = Date.now();
+        await db.rapid_logs
+          .where('uuid').equals(entry.uuid)
+          .modify({ sent_to_ph: 1, sent_to_ph_at: now, updated_at: now });
+        showToast('Sent to Work');
+      } else {
+        showToast(`Failed to send: ${result.error}`);
+      }
+    } finally {
+      setSendingUuid(null);
+    }
+  };
 
   // Show newest first
   const displayLogs = [...logs].reverse();
@@ -69,7 +93,12 @@ export function RapidLogFeed() {
             <AnimatedList>
               {displayLogs.map((log) => (
                 <li key={log.id} className="animate-slide-up border-b border-border">
-                  <RapidLogEntry entry={log} onDelete={deleteRapidLog} />
+                  <RapidLogEntry
+                    entry={log}
+                    onDelete={deleteRapidLog}
+                    onSendToWork={handleSendToWork}
+                    isSending={sendingUuid === log.uuid}
+                  />
                 </li>
               ))}
             </AnimatedList>
