@@ -6,8 +6,8 @@ describe('todayString', () => {
     expect(todayString()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('returns today\'s date (2026-03-15)', () => {
-    expect(todayString()).toBe('2026-03-15');
+  it('returns today\'s date (2026-04-26)', () => {
+    expect(todayString()).toBe('2026-04-26');
   });
 });
 
