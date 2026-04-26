@@ -47,9 +47,9 @@ describe('AppShell', () => {
     expect(links[0]).toHaveAttribute('href', '/log');
   });
 
-  it('renders header with "Friction Journal" text', () => {
+  it('renders header with "Personal Journal" text', () => {
     renderWithRouter();
-    const instances = screen.getAllByText('Friction Journal');
+    const instances = screen.getAllByText('Personal Journal');
     expect(instances.length).toBeGreaterThanOrEqual(1);
   });
 

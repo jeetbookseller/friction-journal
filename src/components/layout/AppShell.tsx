@@ -120,7 +120,7 @@ export function AppShell() {
       {/* Mobile-only top header */}
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-surface">
         <span className="text-sm font-semibold tracking-wide text-on-surface-muted uppercase">
-          Friction Journal
+          Personal Journal
         </span>
         <div className="flex items-center gap-1">
           <a
@@ -150,7 +150,7 @@ export function AppShell() {
       <aside className="hidden md:flex flex-col w-52 shrink-0 border-r border-border bg-surface py-6 px-3 gap-8">
         <div className="px-3">
           <span className="text-sm font-semibold tracking-wide text-on-surface-muted uppercase">
-            Friction Journal
+            Personal Journal
           </span>
         </div>
         <nav aria-label="Sidebar navigation" className="flex flex-col gap-1">
