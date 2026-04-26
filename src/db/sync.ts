@@ -72,10 +72,14 @@ async function applyTable<T extends WithId>(
  * Synchronize local IndexedDB with Supabase.
  *
  * Returns immediately with zero counts if Supabase is not configured.
- * Throws on network or API errors so callers can show error UI.
+ * Throws if the user is not authenticated or on network/API errors.
  */
 export async function syncWithSupabase(): Promise<SyncResult> {
   if (!supabase) return { pulled: 0, pushed: 0, conflicts: 0 };
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+  const userId = session.user.id;
 
   const lastSync = Number(localStorage.getItem(SYNC_KEY) ?? '0');
   let pulled = 0;
@@ -93,7 +97,7 @@ export async function syncWithSupabase(): Promise<SyncResult> {
   pulled += await applyTable(db.habit_logs, data.habit_logs, conflicts);
   pulled += await applyTable(db.rapid_logs, data.rapid_logs, conflicts);
 
-  // Step 3 — Push (upsert local changes since lastSync)
+  // Step 3 — Push (upsert local changes since lastSync, stamp user_id on every row)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tablePairs = [
     [db.actions, 'actions'],
@@ -106,8 +110,11 @@ export async function syncWithSupabase(): Promise<SyncResult> {
   for (const [table, name] of tablePairs) {
     const localChanges = await table.where('updated_at').above(lastSync).toArray();
     if (localChanges.length) {
-      // Strip Dexie's auto-increment `id` — Supabase uses its own serial id
-      const rows = localChanges.map(({ id: _id, ...row }: WithId) => row);
+      // Strip Dexie's auto-increment `id`; ensure user_id is set on every row
+      const rows = localChanges.map(({ id: _id, ...row }: WithId) => ({
+        ...row,
+        user_id: userId,
+      }));
       const { error: pushErr } = await supabase
         .from(name)
         .upsert(rows, { onConflict: 'uuid' });

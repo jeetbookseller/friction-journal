@@ -4,6 +4,16 @@ import { HabitTracker } from '../HabitTracker';
 import * as useHabitsModule from '../../../hooks/useHabits';
 import type { Habit } from '../../../db/models';
 
+vi.mock('../../AuthProvider', () => ({
+  useAuthContext: () => ({
+    session: { user: { id: 'test-user-id' } },
+    loading: false,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
+
 vi.mock('../../../hooks/useHabits');
 
 function makeHabit(overrides: Partial<Habit> = {}): Habit {

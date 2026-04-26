@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { getMonthRange, todayString } from '../../lib/dates';
 import { useTimelineForMonth } from '../../hooks/useTimeline';
+import { useAuthContext } from '../AuthProvider';
 import { TimelineDay } from './TimelineDay';
 
 interface TimelineViewProps {
@@ -14,7 +15,9 @@ export function TimelineView({ initialYear, initialMonth }: TimelineViewProps = 
   const [year, setYear] = useState(initialYear ?? parseInt(today.slice(0, 4)));
   const [month, setMonth] = useState(initialMonth ?? parseInt(today.slice(5, 7)));
 
-  const { events, upsertEvent } = useTimelineForMonth(year, month);
+  const { session } = useAuthContext();
+  const userId = session!.user.id;
+  const { events, upsertEvent } = useTimelineForMonth(year, month, userId);
   const dates = getMonthRange(year, month);
   const headerLabel = format(new Date(year, month - 1), 'MMMM yyyy');
 

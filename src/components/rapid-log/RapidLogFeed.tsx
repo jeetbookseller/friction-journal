@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRapidLogs } from '../../hooks/useRapidLogs';
+import { useAuthContext } from '../AuthProvider';
 import { RapidLogEntry } from './RapidLogEntry';
 import { AddRapidLogForm } from './AddRapidLogForm';
 import { EmptyState } from '../ui/EmptyState';
@@ -22,7 +23,9 @@ const PenIcon = () => (
 
 export function RapidLogFeed() {
   const [filter, setFilter] = useState<RapidLog['tag'] | undefined>(undefined);
-  const { logs, addRapidLog, deleteRapidLog } = useRapidLogs(filter);
+  const { session } = useAuthContext();
+  const userId = session!.user.id;
+  const { logs, addRapidLog, deleteRapidLog } = useRapidLogs(userId, filter);
 
   // Show newest first
   const displayLogs = [...logs].reverse();

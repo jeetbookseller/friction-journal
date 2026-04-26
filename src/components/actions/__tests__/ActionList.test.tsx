@@ -7,6 +7,16 @@ import * as ToastContextModule from '../../ui/ToastContext';
 import { ToastProvider } from '../../ui/ToastContext';
 import type { Action } from '../../../db/models';
 
+vi.mock('../../AuthProvider', () => ({
+  useAuthContext: () => ({
+    session: { user: { id: 'test-user-id' } },
+    loading: false,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
+
 vi.mock('../../../hooks/useActions');
 
 function makeAction(overrides: Partial<Action> = {}): Action {

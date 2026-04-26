@@ -3,11 +3,12 @@ import { db } from '../db/database';
 import { MAX_TOP_PRIORITIES } from '../lib/constants';
 import type { Action } from '../db/models';
 
-export async function addAction(date: string, title: string): Promise<void> {
+export async function addAction(date: string, title: string, userId = ''): Promise<void> {
   const count = await db.actions.where({ date }).filter((a) => a.deleted_at === null).count();
   const now = Date.now();
   await db.actions.add({
     uuid: crypto.randomUUID(),
+    user_id: userId,
     date,
     title,
     is_completed: 0,
@@ -60,7 +61,7 @@ export async function reorderActions(ids: number[]): Promise<void> {
   });
 }
 
-export function useActionsForDate(date: string): {
+export function useActionsForDate(date: string, userId: string): {
   actions: Action[];
   priorityCount: number;
   addAction: (title: string) => Promise<void>;
@@ -84,7 +85,7 @@ export function useActionsForDate(date: string): {
   return {
     actions: result.actions,
     priorityCount: result.priorityCount,
-    addAction: (title: string) => addAction(date, title),
+    addAction: (title: string) => addAction(date, title, userId),
     toggleComplete,
     togglePriority,
     deleteAction,

@@ -3,13 +3,23 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { RapidLog } from '../../../db/models';
 
+vi.mock('../../AuthProvider', () => ({
+  useAuthContext: () => ({
+    session: { user: { id: 'test-user-id' } },
+    loading: false,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
+
 // Mock the hook so RapidLogFeed tests don't need IndexedDB
 const mockAddRapidLog = vi.fn();
 const mockDeleteRapidLog = vi.fn();
 let mockLogs: RapidLog[] = [];
 
 vi.mock('../../../hooks/useRapidLogs', () => ({
-  useRapidLogs: (filter?: RapidLog['tag']) => ({
+  useRapidLogs: (_userId: string, filter?: RapidLog['tag']) => ({
     logs: filter ? mockLogs.filter((l) => l.tag === filter) : mockLogs,
     addRapidLog: mockAddRapidLog,
     deleteRapidLog: mockDeleteRapidLog,
@@ -23,11 +33,14 @@ function makeRapidLog(overrides: Partial<RapidLog> = {}): RapidLog {
   return {
     id: 1,
     uuid: 'test-uuid',
+    user_id: 'test-user-id',
     tag: 'note',
     body: 'Test log entry',
     created_at: Date.now(),
     updated_at: Date.now(),
     deleted_at: null,
+    sent_to_ph: 0,
+    sent_to_ph_at: null,
     ...overrides,
   };
 }

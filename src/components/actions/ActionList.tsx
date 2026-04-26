@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useActionsForDate } from '../../hooks/useActions';
+import { useAuthContext } from '../AuthProvider';
 import { todayString } from '../../lib/dates';
 import { MAX_TOP_PRIORITIES } from '../../lib/constants';
 import { ActionItem } from './ActionItem';
@@ -21,8 +22,10 @@ function CheckboxIcon() {
 
 export function ActionList() {
   const today = todayString();
+  const { session } = useAuthContext();
+  const userId = session!.user.id;
   const { actions, priorityCount, addAction, toggleComplete, togglePriority, deleteAction } =
-    useActionsForDate(today);
+    useActionsForDate(today, userId);
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
 

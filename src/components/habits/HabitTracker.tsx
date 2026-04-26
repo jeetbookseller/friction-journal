@@ -1,5 +1,6 @@
 import { format, subDays, parseISO } from 'date-fns';
 import { useActiveHabits, useHabitLogs } from '../../hooks/useHabits';
+import { useAuthContext } from '../AuthProvider';
 import { todayString } from '../../lib/dates';
 import { MAX_ACTIVE_HABITS } from '../../lib/constants';
 import { HabitCard } from './HabitCard';
@@ -48,7 +49,9 @@ function HabitSlot({ habit, today, onToggleToday, onDeactivate }: HabitSlotProps
 
 export function HabitTracker() {
   const today = todayString();
-  const { habits, activeCount, addHabit, deactivateHabit, toggleHabitLog } = useActiveHabits();
+  const { session } = useAuthContext();
+  const userId = session!.user.id;
+  const { habits, activeCount, addHabit, deactivateHabit, toggleHabitLog } = useActiveHabits(userId);
   const capReached = activeCount >= MAX_ACTIVE_HABITS;
 
   return (

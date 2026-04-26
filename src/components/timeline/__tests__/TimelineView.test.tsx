@@ -5,6 +5,16 @@ import { TimelineView } from '../TimelineView';
 import * as useTimelineModule from '../../../hooks/useTimeline';
 import type { TimelineEvent } from '../../../db/models';
 
+vi.mock('../../AuthProvider', () => ({
+  useAuthContext: () => ({
+    session: { user: { id: 'test-user-id' } },
+    loading: false,
+    signIn: vi.fn(),
+    signUp: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
+
 vi.mock('../../../hooks/useTimeline');
 
 function mockReturn(events: Map<string, TimelineEvent> = new Map()) {
@@ -65,13 +75,13 @@ describe('TimelineView', () => {
 
   it('calls useTimelineForMonth with the initial year and month', () => {
     render(<TimelineView initialYear={2026} initialMonth={3} />);
-    expect(useTimelineModule.useTimelineForMonth).toHaveBeenCalledWith(2026, 3);
+    expect(useTimelineModule.useTimelineForMonth).toHaveBeenCalledWith(2026, 3, 'test-user-id');
   });
 
   it('calls useTimelineForMonth with updated month after navigation', async () => {
     render(<TimelineView initialYear={2026} initialMonth={3} />);
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
-    expect(useTimelineModule.useTimelineForMonth).toHaveBeenCalledWith(2026, 4);
+    expect(useTimelineModule.useTimelineForMonth).toHaveBeenCalledWith(2026, 4, 'test-user-id');
   });
 
   it('root element has animate-fade-in class', () => {

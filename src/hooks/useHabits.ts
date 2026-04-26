@@ -14,7 +14,7 @@ async function activeHabitCount(): Promise<number> {
     .count();
 }
 
-export async function addHabit(name: string): Promise<void> {
+export async function addHabit(name: string, userId = ''): Promise<void> {
   const count = await activeHabitCount();
   if (count >= MAX_ACTIVE_HABITS) {
     throw new Error('Habit cap reached');
@@ -22,6 +22,7 @@ export async function addHabit(name: string): Promise<void> {
   const now = Date.now();
   await db.habits.add({
     uuid: crypto.randomUUID(),
+    user_id: userId,
     name,
     is_active: 1,
     created_at: now,
@@ -42,7 +43,7 @@ export async function reactivateHabit(id: number): Promise<void> {
   await db.habits.update(id, { is_active: 1, updated_at: Date.now() });
 }
 
-export async function toggleHabitLog(habitUuid: string, date: string): Promise<void> {
+export async function toggleHabitLog(habitUuid: string, date: string, userId = ''): Promise<void> {
   const existing = await db.habit_logs
     .where('[habit_uuid+date]')
     .equals([habitUuid, date])
@@ -52,6 +53,7 @@ export async function toggleHabitLog(habitUuid: string, date: string): Promise<v
   if (!existing) {
     await db.habit_logs.add({
       uuid: crypto.randomUUID(),
+      user_id: userId,
       habit_uuid: habitUuid,
       date,
       completed: 1,
@@ -67,7 +69,7 @@ export async function toggleHabitLog(habitUuid: string, date: string): Promise<v
   }
 }
 
-export function useActiveHabits(): {
+export function useActiveHabits(userId: string): {
   habits: Habit[];
   activeCount: number;
   addHabit: (name: string) => Promise<void>;
@@ -86,10 +88,10 @@ export function useActiveHabits(): {
   return {
     habits: result.habits,
     activeCount: result.activeCount,
-    addHabit,
+    addHabit: (name: string) => addHabit(name, userId),
     deactivateHabit,
     reactivateHabit,
-    toggleHabitLog,
+    toggleHabitLog: (habitUuid: string, date: string) => toggleHabitLog(habitUuid, date, userId),
   };
 }
 

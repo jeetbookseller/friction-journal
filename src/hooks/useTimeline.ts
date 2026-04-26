@@ -3,7 +3,7 @@ import { db } from '../db/database';
 import { getMonthRange } from '../lib/dates';
 import type { TimelineEvent } from '../db/models';
 
-export async function upsertEvent(date: string, note: string): Promise<void> {
+export async function upsertEvent(date: string, note: string, userId = ''): Promise<void> {
   const existing = await db.timeline_events.where('date').equals(date).first();
   const now = Date.now();
 
@@ -12,6 +12,7 @@ export async function upsertEvent(date: string, note: string): Promise<void> {
   } else {
     await db.timeline_events.add({
       uuid: crypto.randomUUID(),
+      user_id: userId,
       date,
       note,
       created_at: now,
@@ -24,6 +25,7 @@ export async function upsertEvent(date: string, note: string): Promise<void> {
 export function useTimelineForMonth(
   year: number,
   month: number,
+  userId: string,
 ): {
   events: Map<string, TimelineEvent>;
   upsertEvent: (date: string, note: string) => Promise<void>;
@@ -44,6 +46,6 @@ export function useTimelineForMonth(
 
   return {
     events,
-    upsertEvent,
+    upsertEvent: (date: string, note: string) => upsertEvent(date, note, userId),
   };
 }
