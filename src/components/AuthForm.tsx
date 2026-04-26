@@ -32,7 +32,7 @@ export function AuthForm() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <span className="text-sm font-semibold tracking-wide text-on-surface-muted uppercase">
-            Friction Journal
+            Productivity Hub - Personal Journal
           </span>
         </div>
 
