@@ -131,7 +131,7 @@ export function AppShell() {
             aria-label="Open Productivity Hub"
           >
             <BriefcaseIcon />
-            <span>Work</span>
+            <span>Productivity Hub</span>
           </a>
           <button
             onClick={signOut}
@@ -180,7 +180,7 @@ export function AppShell() {
             aria-label="Open Productivity Hub"
           >
             <BriefcaseIcon width={20} height={20} />
-            <span>Work</span>
+            <span>Productivity Hub</span>
           </a>
           <button
             onClick={signOut}
