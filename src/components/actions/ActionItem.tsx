@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Action } from '../../db/models';
 
 interface ActionItemProps {
@@ -6,6 +7,8 @@ interface ActionItemProps {
   onToggleComplete: (id: number) => void;
   onTogglePriority: (id: number) => void;
   onDelete: (id: number) => void;
+  onUpdateTitle?: (id: number, title: string) => void;
+  onCarryForward?: (id: number) => void;
 }
 
 export function ActionItem({
@@ -14,8 +17,38 @@ export function ActionItem({
   onToggleComplete,
   onTogglePriority,
   onDelete,
+  onUpdateTitle,
+  onCarryForward,
 }: ActionItemProps) {
   const isPriorityDisabled = priorityCapReached && action.is_top_priority === 0;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  function startEditing() {
+    if (!onUpdateTitle) return;
+    setEditValue(action.title);
+    setIsEditing(true);
+  }
+
+  function commitEdit() {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== action.title) {
+      onUpdateTitle?.(action.id!, trimmed);
+    }
+    setIsEditing(false);
+    setEditValue('');
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      commitEdit();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setEditValue('');
+    }
+  }
+
+  const canCarryForward = !!onCarryForward && action.is_completed === 0;
 
   return (
     <div className="group flex items-center gap-3 py-3 px-4">
@@ -25,17 +58,54 @@ export function ActionItem({
         onChange={() => onToggleComplete(action.id!)}
         className="custom-checkbox"
       />
-      <span
-        className={[
-          'flex-1 text-sm text-on-surface',
-          action.is_completed === 1 ? 'line-through text-on-surface-faint' : '',
-          action.is_top_priority === 1 ? 'font-semibold' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-      >
-        {action.title}
-      </span>
+      {isEditing ? (
+        <input
+          type="text"
+          className="flex-1 bg-transparent text-sm text-on-surface outline-none border-b border-accent"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleKeyDown}
+          autoFocus
+        />
+      ) : (
+        <span
+          onClick={startEditing}
+          className={[
+            'flex-1 text-sm text-on-surface',
+            onUpdateTitle ? 'cursor-text' : '',
+            action.is_completed === 1 ? 'line-through text-on-surface-faint' : '',
+            action.is_top_priority === 1 ? 'font-semibold' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {action.title}
+        </span>
+      )}
+      {canCarryForward && (
+        <button
+          aria-label="Carry forward to today"
+          onClick={() => onCarryForward!(action.id!)}
+          className="flex-shrink-0 text-on-surface-faint hover:text-accent transition-colors cursor-pointer"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 12h13.5m0 0l-4.5-4.5m4.5 4.5l-4.5 4.5M21 4.5v15"
+            />
+          </svg>
+        </button>
+      )}
       <button
         aria-label={action.is_top_priority === 1 ? 'Remove priority' : 'Set priority'}
         disabled={isPriorityDisabled}
@@ -65,7 +135,7 @@ export function ActionItem({
       <button
         aria-label="Delete action"
         onClick={() => onDelete(action.id!)}
-        className="flex-shrink-0 text-on-surface-faint hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+        className="flex-shrink-0 text-on-surface-faint hover:text-danger transition-colors cursor-pointer"
       >
         <svg
           width="16"

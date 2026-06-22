@@ -174,4 +174,81 @@ describe('ActionItem', () => {
     const title = screen.getByText('Test action');
     expect(title.className).toMatch(/text-on-surface-faint/);
   });
+
+  it('keeps the delete button always visible (no hover-only gate)', () => {
+    render(
+      <ActionItem
+        action={makeAction()}
+        priorityCapReached={false}
+        onToggleComplete={vi.fn()}
+        onTogglePriority={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    const deleteButton = screen.getByRole('button', { name: /delete/i });
+    expect(deleteButton.className).not.toMatch(/opacity-0/);
+  });
+
+  it('enters edit mode and calls onUpdateTitle on Enter', async () => {
+    const onUpdateTitle = vi.fn();
+    render(
+      <ActionItem
+        action={makeAction({ id: 3, title: 'Old title' })}
+        priorityCapReached={false}
+        onToggleComplete={vi.fn()}
+        onTogglePriority={vi.fn()}
+        onDelete={vi.fn()}
+        onUpdateTitle={onUpdateTitle}
+      />
+    );
+    await userEvent.click(screen.getByText('Old title'));
+    const input = screen.getByRole('textbox');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'New title{Enter}');
+    expect(onUpdateTitle).toHaveBeenCalledWith(3, 'New title');
+  });
+
+  it('does not enter edit mode when onUpdateTitle is not provided', async () => {
+    render(
+      <ActionItem
+        action={makeAction({ title: 'Locked title' })}
+        priorityCapReached={false}
+        onToggleComplete={vi.fn()}
+        onTogglePriority={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    await userEvent.click(screen.getByText('Locked title'));
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('shows a carry-forward button for incomplete items when onCarryForward is provided', async () => {
+    const onCarryForward = vi.fn();
+    render(
+      <ActionItem
+        action={makeAction({ id: 8, is_completed: 0 })}
+        priorityCapReached={false}
+        onToggleComplete={vi.fn()}
+        onTogglePriority={vi.fn()}
+        onDelete={vi.fn()}
+        onCarryForward={onCarryForward}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /carry forward/i }));
+    expect(onCarryForward).toHaveBeenCalledWith(8);
+  });
+
+  it('hides the carry-forward button for completed items', () => {
+    render(
+      <ActionItem
+        action={makeAction({ is_completed: 1 })}
+        priorityCapReached={false}
+        onToggleComplete={vi.fn()}
+        onTogglePriority={vi.fn()}
+        onDelete={vi.fn()}
+        onCarryForward={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('button', { name: /carry forward/i })).not.toBeInTheDocument();
+  });
 });

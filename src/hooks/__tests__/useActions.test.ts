@@ -7,7 +7,25 @@ import {
   togglePriority,
   deleteAction,
   reorderActions,
+  updateActionTitle,
+  clearCompleted,
+  carryForwardAction,
 } from '../useActions';
+
+function makeRow(overrides: Record<string, unknown> = {}) {
+  return {
+    uuid: crypto.randomUUID(),
+    date: '2026-03-15',
+    title: 'Test',
+    is_completed: 0,
+    is_top_priority: 0,
+    sort_order: 0,
+    created_at: Date.now(),
+    updated_at: Date.now(),
+    deleted_at: null,
+    ...overrides,
+  };
+}
 
 beforeEach(async () => {
   await db.actions.clear();
@@ -251,6 +269,82 @@ describe('deleteAction', () => {
 
     const count = await db.actions.count();
     expect(count).toBe(1);
+  });
+});
+
+describe('updateActionTitle', () => {
+  it('updates the title and bumps updated_at', async () => {
+    const id = (await db.actions.add(makeRow({ title: 'Old', updated_at: 1 }))) as number;
+    await updateActionTitle(id, 'New title');
+    const action = await db.actions.get(id);
+    expect(action?.title).toBe('New title');
+    expect(action?.updated_at).toBeGreaterThan(1);
+  });
+
+  it('trims whitespace and ignores empty titles', async () => {
+    const id = (await db.actions.add(makeRow({ title: 'Keep' }))) as number;
+    await updateActionTitle(id, '  Trimmed  ');
+    expect((await db.actions.get(id))?.title).toBe('Trimmed');
+    await updateActionTitle(id, '   ');
+    expect((await db.actions.get(id))?.title).toBe('Trimmed');
+  });
+});
+
+describe('clearCompleted', () => {
+  it('soft-deletes only completed actions on the given date', async () => {
+    const done = (await db.actions.add(makeRow({ title: 'Done', is_completed: 1 }))) as number;
+    const open = (await db.actions.add(makeRow({ title: 'Open', is_completed: 0 }))) as number;
+    const otherDay = (await db.actions.add(
+      makeRow({ title: 'Other day done', is_completed: 1, date: '2026-03-14' })
+    )) as number;
+
+    await clearCompleted('2026-03-15');
+
+    expect((await db.actions.get(done))?.deleted_at).not.toBeNull();
+    expect((await db.actions.get(open))?.deleted_at).toBeNull();
+    expect((await db.actions.get(otherDay))?.deleted_at).toBeNull();
+  });
+});
+
+describe('carryForwardAction', () => {
+  it('moves an incomplete action to the target date at the bottom', async () => {
+    await db.actions.add(makeRow({ title: 'Existing today', date: '2026-03-16', sort_order: 0 }));
+    const id = (await db.actions.add(
+      makeRow({ title: 'Carry me', date: '2026-03-15', sort_order: 5 })
+    )) as number;
+
+    await carryForwardAction(id, '2026-03-16');
+
+    const action = await db.actions.get(id);
+    expect(action?.date).toBe('2026-03-16');
+    expect(action?.sort_order).toBe(1);
+  });
+
+  it('does not move completed actions', async () => {
+    const id = (await db.actions.add(
+      makeRow({ is_completed: 1, date: '2026-03-15' })
+    )) as number;
+    await carryForwardAction(id, '2026-03-16');
+    expect((await db.actions.get(id))?.date).toBe('2026-03-15');
+  });
+});
+
+describe('useActionsForDate sort order', () => {
+  it('orders incomplete-priority first, then incomplete, then completed', async () => {
+    await db.actions.add(makeRow({ title: 'completed', is_completed: 1, sort_order: 0 }));
+    await db.actions.add(makeRow({ title: 'normal', is_completed: 0, is_top_priority: 0, sort_order: 1 }));
+    await db.actions.add(makeRow({ title: 'priority', is_completed: 0, is_top_priority: 1, sort_order: 2 }));
+
+    const sorted = (
+      await db.actions.where('date').equals('2026-03-15').filter((a) => a.deleted_at === null).toArray()
+    ).sort(
+      (a, b) =>
+        a.is_completed - b.is_completed ||
+        b.is_top_priority - a.is_top_priority ||
+        a.sort_order - b.sort_order
+    );
+
+    expect(sorted.map((a) => a.title)).toEqual(['priority', 'normal', 'completed']);
   });
 });
 

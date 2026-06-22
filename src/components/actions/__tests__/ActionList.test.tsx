@@ -43,9 +43,13 @@ function mockHook(overrides: Partial<ReturnType<typeof useActionsModule.useActio
     toggleComplete: vi.fn(),
     togglePriority: vi.fn(),
     deleteAction: vi.fn(),
+    updateActionTitle: vi.fn(),
+    clearCompleted: vi.fn(),
+    carryForwardAction: vi.fn(),
     reorderActions: vi.fn(),
     ...overrides,
   });
+  vi.mocked(useActionsModule.usePendingMigrationCount).mockReturnValue(0);
 }
 
 function renderWithProvider(ui: React.ReactElement) {
@@ -147,5 +151,45 @@ describe('ActionList', () => {
     renderWithProvider(<ActionList />);
     await userEvent.click(screen.getByRole('button', { name: /delete/i }));
     expect(showToastMock).toHaveBeenCalledWith('Action deleted');
+  });
+
+  it('does not show "Clear completed" when there are no completed actions', () => {
+    mockHook({ actions: [makeAction({ id: 1, is_completed: 0 })] });
+    renderWithProvider(<ActionList />);
+    expect(screen.queryByRole('button', { name: /clear completed/i })).not.toBeInTheDocument();
+  });
+
+  it('shows "Clear completed" and calls clearCompleted when completed actions exist', async () => {
+    const showToastMock = vi.fn();
+    vi.spyOn(ToastContextModule, 'useToast').mockReturnValue({ showToast: showToastMock });
+    const clearCompletedMock = vi.fn().mockResolvedValue(undefined);
+    mockHook({
+      actions: [makeAction({ id: 1, is_completed: 1 })],
+      clearCompleted: clearCompletedMock,
+    });
+    renderWithProvider(<ActionList />);
+    await userEvent.click(screen.getByRole('button', { name: /clear completed/i }));
+    expect(clearCompletedMock).toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith('Completed cleared');
+  });
+
+  it('navigates to the previous day and back to today', async () => {
+    renderWithProvider(<ActionList />);
+    expect(screen.getByRole('heading')).toHaveTextContent('Today');
+    expect(screen.queryByRole('button', { name: 'Today' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /previous day/i }));
+    expect(screen.getByRole('heading')).not.toHaveTextContent('Today');
+
+    const todayButton = screen.getByRole('button', { name: 'Today' });
+    await userEvent.click(todayButton);
+    expect(screen.getByRole('heading')).toHaveTextContent('Today');
+  });
+
+  it('shows the migration banner when there are unfinished actions from earlier days', () => {
+    mockHook();
+    vi.mocked(useActionsModule.usePendingMigrationCount).mockReturnValue(2);
+    renderWithProvider(<ActionList />);
+    expect(screen.getByText(/2 unfinished from earlier/i)).toBeInTheDocument();
   });
 });

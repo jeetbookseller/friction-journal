@@ -53,6 +53,39 @@ export async function deleteAction(id: number): Promise<void> {
   await db.actions.update(id, { deleted_at: Date.now(), updated_at: Date.now() });
 }
 
+export async function updateActionTitle(id: number, title: string): Promise<void> {
+  const trimmed = title.trim();
+  if (!trimmed) return;
+  await db.actions.update(id, { title: trimmed, updated_at: Date.now() });
+}
+
+export async function clearCompleted(date: string): Promise<void> {
+  const now = Date.now();
+  await db.transaction('rw', db.actions, async () => {
+    const completed = await db.actions
+      .where({ date })
+      .filter((a) => a.deleted_at === null && a.is_completed === 1)
+      .toArray();
+    for (const action of completed) {
+      await db.actions.update(action.id!, { deleted_at: now, updated_at: now });
+    }
+  });
+}
+
+export async function carryForwardAction(id: number, toDate: string): Promise<void> {
+  const action = await db.actions.get(id);
+  if (!action || action.is_completed === 1 || action.date === toDate) return;
+  const count = await db.actions
+    .where({ date: toDate })
+    .filter((a) => a.deleted_at === null)
+    .count();
+  await db.actions.update(id, {
+    date: toDate,
+    sort_order: count,
+    updated_at: Date.now(),
+  });
+}
+
 export async function reorderActions(ids: number[]): Promise<void> {
   await db.transaction('rw', db.actions, async () => {
     for (let i = 0; i < ids.length; i++) {
@@ -68,6 +101,9 @@ export function useActionsForDate(date: string, userId: string): {
   toggleComplete: (id: number) => Promise<void>;
   togglePriority: (id: number) => Promise<void>;
   deleteAction: (id: number) => Promise<void>;
+  updateActionTitle: (id: number, title: string) => Promise<void>;
+  clearCompleted: () => Promise<void>;
+  carryForwardAction: (id: number, toDate: string) => Promise<void>;
   reorderActions: (ids: number[]) => Promise<void>;
 } {
   const result = useLiveQuery(async () => {
@@ -77,7 +113,12 @@ export function useActionsForDate(date: string, userId: string): {
         .equals(date)
         .filter((a) => a.deleted_at === null)
         .toArray()
-    ).sort((a, b) => a.sort_order - b.sort_order);
+    ).sort(
+      (a, b) =>
+        a.is_completed - b.is_completed ||
+        b.is_top_priority - a.is_top_priority ||
+        a.sort_order - b.sort_order
+    );
     const priorityCount = actions.filter((a) => a.is_top_priority === 1).length;
     return { actions, priorityCount };
   }, [date]) ?? { actions: [], priorityCount: 0 };
@@ -89,6 +130,26 @@ export function useActionsForDate(date: string, userId: string): {
     toggleComplete,
     togglePriority,
     deleteAction,
+    updateActionTitle,
+    clearCompleted: () => clearCompleted(date),
+    carryForwardAction,
     reorderActions,
   };
+}
+
+export function usePendingMigrationCount(beforeDate: string, _userId: string): number {
+  return (
+    useLiveQuery(
+      async () =>
+        db.actions
+          .filter(
+            (a) =>
+              a.deleted_at === null &&
+              a.is_completed === 0 &&
+              a.date < beforeDate
+          )
+          .count(),
+      [beforeDate]
+    ) ?? 0
+  );
 }
