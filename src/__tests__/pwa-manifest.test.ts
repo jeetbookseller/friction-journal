@@ -10,7 +10,7 @@ const projectRoot = resolve(__dirname, '..', '..');
 
 describe('PWA Manifest', () => {
   it('has required name fields', () => {
-    expect(manifest.name).toBe('Friction Journal');
+    expect(manifest.name).toBe('Journal & Plan');
     expect(manifest.short_name).toBeDefined();
     expect(manifest.description).toBeDefined();
   });

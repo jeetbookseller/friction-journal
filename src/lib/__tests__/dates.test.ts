@@ -1,13 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { todayString, getMonthRange, daysActiveCount } from '../dates';
+import {
+  todayString,
+  getMonthRange,
+  daysActiveCount,
+  weekStartString,
+  weekRangeLabel,
+  dayLabel,
+  shortDayLabel,
+} from '../dates';
 
 describe('todayString', () => {
   it('returns a string matching YYYY-MM-DD format', () => {
     expect(todayString()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('returns today\'s date (2026-04-26)', () => {
-    expect(todayString()).toBe('2026-04-26');
+  it("returns today's local date", () => {
+    const now = new Date();
+    const expected = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+    ].join('-');
+    expect(todayString()).toBe(expected);
   });
 });
 
@@ -58,5 +72,42 @@ describe('daysActiveCount', () => {
   it('returns approximately 7 for 7 days ago', () => {
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     expect(daysActiveCount(sevenDaysAgo)).toBe(7);
+  });
+});
+
+describe('weekStartString', () => {
+  it('maps a mid-week date to the preceding Sunday', () => {
+    // 2026-07-04 is a Saturday; its Sunday-start week begins 2026-06-28
+    expect(weekStartString(new Date(2026, 6, 4))).toBe('2026-06-28');
+  });
+
+  it('maps a Sunday to itself', () => {
+    expect(weekStartString(new Date(2026, 5, 28))).toBe('2026-06-28');
+  });
+});
+
+describe('weekRangeLabel', () => {
+  it('spans months: "June 28 – July 4"', () => {
+    expect(weekRangeLabel('2026-06-28')).toBe('June 28 – July 4');
+  });
+
+  it('stays within one month: "June 7 – 13"', () => {
+    expect(weekRangeLabel('2026-06-07')).toBe('June 7 – 13');
+  });
+
+  it('appends the year for non-current years', () => {
+    expect(weekRangeLabel('2024-06-02')).toBe('June 2 – 8, 2024');
+  });
+});
+
+describe('dayLabel', () => {
+  it('formats as "Sat, Jul 4"', () => {
+    expect(dayLabel(new Date(2026, 6, 4).getTime())).toBe('Sat, Jul 4');
+  });
+});
+
+describe('shortDayLabel', () => {
+  it('formats as "Su Jun 28"', () => {
+    expect(shortDayLabel('2026-06-28')).toBe('Su Jun 28');
   });
 });

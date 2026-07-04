@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../../db/database';
-import { addRapidLog, deleteRapidLog } from '../useRapidLogs';
+import { addRapidLog, updateRapidLogBody, deleteRapidLog } from '../useRapidLogs';
 
 beforeEach(async () => {
   await db.rapid_logs.clear();
@@ -191,5 +191,42 @@ describe('getRapidLogs (DB queries matching useRapidLogs behavior)', () => {
 
     const allLogs = await db.rapid_logs.filter((l) => l.deleted_at === null).toArray();
     expect(allLogs).toHaveLength(3);
+  });
+});
+
+describe('updateRapidLogBody', () => {
+  it('updates the body and bumps updated_at', async () => {
+    const id = await db.rapid_logs.add({
+      uuid: crypto.randomUUID(), tag: 'note', body: 'Before',
+      created_at: 1000, updated_at: 1000, deleted_at: null,
+    });
+
+    await updateRapidLogBody(id as number, 'After');
+
+    const log = await db.rapid_logs.get(id as number);
+    expect(log?.body).toBe('After');
+    expect(log?.updated_at).toBeGreaterThan(1000);
+  });
+
+  it('trims the body', async () => {
+    const id = await db.rapid_logs.add({
+      uuid: crypto.randomUUID(), tag: 'note', body: 'Before',
+      created_at: 1000, updated_at: 1000, deleted_at: null,
+    });
+
+    await updateRapidLogBody(id as number, '  spaced  ');
+
+    const log = await db.rapid_logs.get(id as number);
+    expect(log?.body).toBe('spaced');
+  });
+
+  it('throws when body is empty', async () => {
+    await expect(updateRapidLogBody(1, '   ')).rejects.toThrow('Body cannot be empty');
+  });
+
+  it('throws when body exceeds 280 characters', async () => {
+    await expect(updateRapidLogBody(1, 'x'.repeat(281))).rejects.toThrow(
+      'Body cannot exceed 280 characters',
+    );
   });
 });

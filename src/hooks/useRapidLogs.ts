@@ -24,6 +24,17 @@ export async function addRapidLog(tag: RapidLog['tag'], body: string, userId = '
   });
 }
 
+export async function updateRapidLogBody(id: number, body: string): Promise<void> {
+  const trimmed = body.trim();
+  if (!trimmed) {
+    throw new Error('Body cannot be empty');
+  }
+  if (trimmed.length > 280) {
+    throw new Error('Body cannot exceed 280 characters');
+  }
+  await db.rapid_logs.update(id, { body: trimmed, updated_at: Date.now() });
+}
+
 export async function deleteRapidLog(id: number): Promise<void> {
   await db.rapid_logs.update(id, { deleted_at: Date.now(), updated_at: Date.now() });
 }
@@ -31,6 +42,7 @@ export async function deleteRapidLog(id: number): Promise<void> {
 export function useRapidLogs(userId: string, filter?: RapidLog['tag']): {
   logs: RapidLog[];
   addRapidLog: (tag: RapidLog['tag'], body: string) => Promise<void>;
+  updateRapidLogBody: (id: number, body: string) => Promise<void>;
   deleteRapidLog: (id: number) => Promise<void>;
 } {
   const logs = useLiveQuery(async () => {
@@ -43,6 +55,7 @@ export function useRapidLogs(userId: string, filter?: RapidLog['tag']): {
   return {
     logs,
     addRapidLog: (tag: RapidLog['tag'], body: string) => addRapidLog(tag, body, userId),
+    updateRapidLogBody,
     deleteRapidLog,
   };
 }

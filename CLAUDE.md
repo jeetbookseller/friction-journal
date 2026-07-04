@@ -22,21 +22,24 @@ Offline-first personal journaling web app enforcing analog Bullet Journal fricti
 ```
 src/
 ├── main.tsx
-├── App.tsx                           # HashRouter with 4 routes + layout, wrapped in AuthProvider + ToastProvider
+├── App.tsx                           # HashRouter with 5 routes + layout, wrapped in AuthProvider + ToastProvider
 ├── db/
 │   ├── models.ts                     # TypeScript interfaces (Action, TimelineEvent, Habit, HabitLog, RapidLog)
-│   ├── database.ts                   # Dexie instance with schema for all 5 tables (v2 with user_id indexes)
-│   └── sync.ts                       # Supabase LWW sync (pull → apply → push → confirm); stamps user_id on push
+│   ├── database.ts                   # Dexie instance with schema for all 5 tables (v3 backfills habits.details)
+│   ├── sync.ts                       # Supabase LWW sync (pull → apply → push → confirm); stamps user_id on push
+│   └── reset.ts                      # softDeleteAllData / resetAllData (tombstone all tables + sync)
 ├── hooks/
 │   ├── useAuth.ts                    # Supabase auth hook (session, signIn, signUp, signOut)
 │   ├── useActions.ts                 # CRUD for daily actions (date-scoped, priority cap); accepts userId param
 │   ├── useTimeline.ts                # CRUD for timeline events (month queries, upsert); accepts userId param
-│   ├── useHabits.ts                  # CRUD for habits + habit logs (active cap, test run); accepts userId param
-│   └── useRapidLogs.ts               # CRUD for rapid log entries (tag filter, soft delete); accepts userId param
+│   ├── useHabits.ts                  # CRUD for habits + habit logs (details edit, soft delete, active cap, test run)
+│   ├── useRapidLogs.ts               # CRUD for rapid log entries (tag filter, body edit, soft delete)
+│   └── useMetrics.ts                 # gatherMetrics + useMetrics: per-day actions/habits/timeline aggregation
 ├── components/
 │   ├── AuthProvider.tsx              # Auth context + useAuthContext()
 │   ├── AuthForm.tsx                  # Login / signup form using FJ design tokens
 │   ├── ui/
+│   │   ├── Modal.tsx                 # Shared dialog (backdrop + Escape close), used by habits delete / export / reset
 │   │   ├── ToastContext.tsx          # Toast notifications context + provider (auto-dismiss 3s)
 │   │   ├── EmptyState.tsx            # Reusable empty state with icon/title/description
 │   │   ├── Card.tsx                  # Surface-raised card wrapper with hover shadow
@@ -54,13 +57,19 @@ src/
 │   │   ├── HabitTracker.tsx
 │   │   ├── HabitCard.tsx
 │   │   └── AddHabitForm.tsx
-│   └── rapid-log/
-│       ├── RapidLogFeed.tsx          # Handles Send to Work logic; passes isSending state to entries
-│       ├── RapidLogEntry.tsx         # Tag-colored pills, trash, Send to Work button (briefcase/check icon)
-│       └── AddRapidLogForm.tsx
+│   ├── rapid-log/
+│   │   ├── RapidLogFeed.tsx          # Weekly collapsible sections + day headers; Send to Work logic
+│   │   ├── RapidLogEntry.tsx         # Tag-colored pills, click-to-edit body, trash, Send to Work button
+│   │   └── AddRapidLogForm.tsx
+│   └── metrics/
+│       ├── MetricsView.tsx           # /metrics page: week/month toggle, prev/next nav (5 yr), export + reset
+│       ├── MetricsTable.tsx          # Days × (Actions, per-habit ✓, Timeline) table
+│       ├── ExportCsvDialog.tsx       # Date-range picker → CSV download (asked every export)
+│       └── ResetDataDialog.tsx       # Type-DELETE gate, export-first option, calls resetAllData()
 ├── lib/
 │   ├── constants.ts                  # MAX_TOP_PRIORITIES=3, MAX_ACTIVE_HABITS=3, TEST_RUN_DAYS=7, TAG_OPTIONS
-│   ├── dates.ts                      # todayString(), getMonthRange(), daysActiveCount()
+│   ├── dates.ts                      # todayString(), getMonthRange(), week helpers (Sunday start), day labels
+│   ├── csv.ts                        # gatherCsvData/buildCsv/downloadCsv (date,actions,habits ✓,timeline,rapid logs)
 │   ├── sendToProductivityHub.ts      # Read-modify-write PH’s user_data notes blob via shared Supabase client
 │   └── supabase.ts                   # Supabase client singleton (null when env vars absent)
 └── styles/
@@ -70,7 +79,8 @@ supabase/
 └── migrations/
     ├── 001_initial_schema.sql        # Base schema: 5 tables, RLS, triggers, indexes, pull_changes RPC
     ├── 002_user_scoping.sql          # Adds user_id to all tables; per-user RLS; updates pull_changes RPC
-    └── 003_rapid_log_sent_flag.sql   # Adds sent_to_ph + sent_to_ph_at to rapid_logs
+    ├── 003_rapid_log_sent_flag.sql   # Adds sent_to_ph + sent_to_ph_at to rapid_logs
+    └── 004_habit_details.sql         # Adds details TEXT to habits
 
 .github/
 └── workflows/
@@ -87,7 +97,7 @@ Defined in `src/db/models.ts`. All models include `user_id: string` for per-user
 
 - **Action** — Daily task with `is_completed`, `is_top_priority`, `sort_order`, scoped by `date`
 - **TimelineEvent** — One note per day (unique `date` index), month-navigable
-- **Habit** — Max 3 active (`is_active` cap), with 7-day "Test Run" badge
+- **Habit** — Max 3 active, with 7-day "Test Run" badge; immutable `name` + editable `details`
 - **HabitLog** — Daily completion per habit, compound index `[habit_uuid+date]`
 - **RapidLog** — Tagged entries (`note` | `event` | `mood`), chronological feed; includes `sent_to_ph: 0 | 1` and `sent_to_ph_at: number | null` for cross-app tracking
 
@@ -95,9 +105,10 @@ Defined in `src/db/models.ts`. All models include `user_id: string` for per-user
 
 - **Auth:** App renders `AuthForm` until a Supabase session exists. Sign-out clears `last_sync_timestamp`.
 - **Actions:** Max 3 top priorities per day. No rollover — queries scoped to exact date.
-- **Habits:** Max 3 active habits. Test Run badge auto-shown for first 7 days.
+- **Habits:** Max 3 active habits. Test Run badge auto-shown for first 7 days. Name is NOT editable — delete (soft) and recreate to rename; `details` is editable inline. No deactivate/reactivate.
 - **Timeline:** One entry per day enforced by unique Dexie index. Upsert via `put()`.
-- **Rapid Log:** Tags restricted to `note` | `event` | `mood`. Body max ~280 chars. `sent_to_ph` is a one-way flag — cannot be unset.
+- **Rapid Log:** Tags restricted to `note` | `event` | `mood`. Body max ~280 chars, editable inline. `sent_to_ph` is a one-way flag — cannot be unset. Feed grouped into Sunday-start weekly sections; only the current week is expanded by default.
+- **Metrics:** Reached from a header link (not a tab). Week/month views navigable back 5 years. CSV export always asks for a date range. Reset soft-deletes all data locally and (via sync) in Supabase, gated by typing `DELETE`.
 
 ## Scripts
 
@@ -148,6 +159,7 @@ The sync engine and auth are fully implemented. To activate on a new environment
    - `supabase/migrations/001_initial_schema.sql` — base tables, RLS, triggers, `pull_changes` RPC
    - `supabase/migrations/002_user_scoping.sql` — `user_id` columns, per-user policies, updated RPC
    - `supabase/migrations/003_rapid_log_sent_flag.sql` — `sent_to_ph` / `sent_to_ph_at` on `rapid_logs`
+   - `supabase/migrations/004_habit_details.sql` — `details` on `habits` (**must be applied before deploying the habit-details app version**, or habit sync pushes fail on the unknown column)
 
 3. **Add credentials** — create `.env.local` in the project root:
    ```

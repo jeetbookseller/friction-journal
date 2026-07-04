@@ -26,6 +26,21 @@ class FrictionJournalDB extends Dexie {
       habit_logs:      '++id, uuid, user_id, [habit_uuid+date], updated_at, deleted_at',
       rapid_logs:      '++id, uuid, user_id, tag, updated_at, deleted_at',
     });
+    // Backfill habits.details so every row has the key — sync pushes whole rows
+    // via bulk upsert, which requires uniform columns across the batch.
+    this.version(3)
+      .stores({
+        actions:         '++id, uuid, user_id, date, updated_at, deleted_at',
+        timeline_events: '++id, uuid, user_id, date, updated_at, deleted_at',
+        habits:          '++id, uuid, user_id, is_active, updated_at, deleted_at',
+        habit_logs:      '++id, uuid, user_id, [habit_uuid+date], updated_at, deleted_at',
+        rapid_logs:      '++id, uuid, user_id, tag, updated_at, deleted_at',
+      })
+      .upgrade((tx) =>
+        tx.table('habits').toCollection().modify((h) => {
+          if (h.details === undefined) h.details = '';
+        }),
+      );
   }
 }
 

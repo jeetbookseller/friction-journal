@@ -3,8 +3,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../../db/database';
 import {
   addHabit,
-  deactivateHabit,
-  reactivateHabit,
+  updateHabitDetails,
+  deleteHabit,
   toggleHabitLog,
   isTestRun,
 } from '../useHabits';
@@ -18,7 +18,9 @@ beforeEach(async () => {
 function makeHabit(overrides: Partial<Habit> = {}): Omit<Habit, 'id'> {
   return {
     uuid: crypto.randomUUID(),
+    user_id: '',
     name: 'Test Habit',
+    details: '',
     is_active: 1,
     created_at: Date.now(),
     updated_at: Date.now(),
@@ -35,11 +37,19 @@ describe('addHabit', () => {
     expect(all).toHaveLength(1);
     const habit = all[0];
     expect(habit.name).toBe('Morning Run');
+    expect(habit.details).toBe('');
     expect(habit.is_active).toBe(1);
     expect(habit.deleted_at).toBeNull();
     expect(habit.uuid).toBeTruthy();
     expect(typeof habit.created_at).toBe('number');
     expect(typeof habit.updated_at).toBe('number');
+  });
+
+  it('stores trimmed details when provided', async () => {
+    await addHabit('Meditation', '  30 min at least  ');
+
+    const habit = (await db.habits.toArray())[0];
+    expect(habit.details).toBe('30 min at least');
   });
 
   it('throws "Habit cap reached" when 3 active habits exist', async () => {
@@ -75,42 +85,58 @@ describe('addHabit', () => {
   });
 });
 
-describe('deactivateHabit', () => {
-  it('sets is_active to 0', async () => {
-    const id = await db.habits.add(makeHabit());
+describe('updateHabitDetails', () => {
+  it('updates details and bumps updated_at', async () => {
+    const id = await db.habits.add(makeHabit({ updated_at: 1000 }));
 
-    await deactivateHabit(id as number);
+    await updateHabitDetails(id as number, '25 min');
 
     const habit = await db.habits.get(id as number);
-    expect(habit?.is_active).toBe(0);
+    expect(habit?.details).toBe('25 min');
+    expect(habit?.updated_at).toBeGreaterThan(1000);
   });
 
-  it('does not physically remove the row', async () => {
+  it('trims details', async () => {
     const id = await db.habits.add(makeHabit());
 
-    await deactivateHabit(id as number);
+    await updateHabitDetails(id as number, '  7.5 hours  ');
 
-    expect(await db.habits.count()).toBe(1);
+    const habit = await db.habits.get(id as number);
+    expect(habit?.details).toBe('7.5 hours');
+  });
+
+  it('allows clearing details to an empty string', async () => {
+    const id = await db.habits.add(makeHabit({ details: '30 min' }));
+
+    await updateHabitDetails(id as number, '');
+
+    const habit = await db.habits.get(id as number);
+    expect(habit?.details).toBe('');
   });
 });
 
-describe('reactivateHabit', () => {
-  it('sets is_active to 1 when cap not reached', async () => {
-    const id = await db.habits.add(makeHabit({ is_active: 0 }));
+describe('deleteHabit', () => {
+  it('sets deleted_at and updated_at without removing the row', async () => {
+    const id = await db.habits.add(makeHabit({ updated_at: 1000 }));
 
-    await reactivateHabit(id as number);
+    await deleteHabit(id as number);
 
+    expect(await db.habits.count()).toBe(1);
     const habit = await db.habits.get(id as number);
-    expect(habit?.is_active).toBe(1);
+    expect(habit?.deleted_at).not.toBeNull();
+    expect(habit?.updated_at).toBeGreaterThan(1000);
   });
 
-  it('throws "Habit cap reached" when 3 active habits exist', async () => {
+  it('frees a habit slot toward the cap', async () => {
+    const ids: number[] = [];
     for (let i = 0; i < 3; i++) {
-      await db.habits.add(makeHabit({ name: `Active ${i}` }));
+      ids.push((await db.habits.add(makeHabit({ name: `Habit ${i}` }))) as number);
     }
-    const id = await db.habits.add(makeHabit({ name: 'Inactive', is_active: 0 }));
+    await expect(addHabit('Fourth')).rejects.toThrow('Habit cap reached');
 
-    await expect(reactivateHabit(id as number)).rejects.toThrow('Habit cap reached');
+    await deleteHabit(ids[0]);
+
+    await expect(addHabit('Fourth')).resolves.not.toThrow();
   });
 });
 
@@ -171,7 +197,9 @@ describe('isTestRun', () => {
     const habit: Habit = {
       id: 1,
       uuid: crypto.randomUUID(),
+      user_id: '',
       name: 'New Habit',
+      details: '',
       is_active: 1,
       created_at: Date.now(),
       updated_at: Date.now(),
@@ -185,7 +213,9 @@ describe('isTestRun', () => {
     const habit: Habit = {
       id: 1,
       uuid: crypto.randomUUID(),
+      user_id: '',
       name: 'Old Habit',
+      details: '',
       is_active: 1,
       created_at: Date.now() - 8 * 86400000,
       updated_at: Date.now(),
@@ -199,7 +229,9 @@ describe('isTestRun', () => {
     const habit: Habit = {
       id: 1,
       uuid: crypto.randomUUID(),
+      user_id: '',
       name: 'Week Old Habit',
+      details: '',
       is_active: 1,
       created_at: Date.now() - 7 * 86400000,
       updated_at: Date.now(),

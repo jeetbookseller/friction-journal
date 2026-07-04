@@ -4,27 +4,40 @@ import userEvent from '@testing-library/user-event';
 import { AddHabitForm } from '../AddHabitForm';
 
 describe('AddHabitForm', () => {
-  it('renders a text input and submit button', () => {
+  it('renders name and details inputs and a submit button', () => {
     render(<AddHabitForm onAdd={vi.fn()} capReached={false} />);
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/new habit name/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/details \(optional\)/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add habit/i })).toBeInTheDocument();
   });
 
-  it('calls onAdd with trimmed input value on submit', async () => {
+  it('calls onAdd with trimmed name and details on submit', async () => {
     const onAdd = vi.fn().mockResolvedValue(undefined);
     render(<AddHabitForm onAdd={onAdd} capReached={false} />);
-    await userEvent.type(screen.getByRole('textbox'), '  Morning Run  ');
+    await userEvent.type(screen.getByPlaceholderText(/new habit name/i), '  Morning Run  ');
+    await userEvent.type(screen.getByPlaceholderText(/details \(optional\)/i), ' 25 min ');
     await userEvent.click(screen.getByRole('button', { name: /add habit/i }));
-    expect(onAdd).toHaveBeenCalledWith('Morning Run');
+    expect(onAdd).toHaveBeenCalledWith('Morning Run', '25 min');
   });
 
-  it('clears input after submission', async () => {
+  it('details are optional', async () => {
     const onAdd = vi.fn().mockResolvedValue(undefined);
     render(<AddHabitForm onAdd={onAdd} capReached={false} />);
-    const input = screen.getByRole('textbox');
-    await userEvent.type(input, 'Morning Run');
+    await userEvent.type(screen.getByPlaceholderText(/new habit name/i), 'Morning Run');
     await userEvent.click(screen.getByRole('button', { name: /add habit/i }));
-    expect(input).toHaveValue('');
+    expect(onAdd).toHaveBeenCalledWith('Morning Run', '');
+  });
+
+  it('clears both inputs after submission', async () => {
+    const onAdd = vi.fn().mockResolvedValue(undefined);
+    render(<AddHabitForm onAdd={onAdd} capReached={false} />);
+    const nameInput = screen.getByPlaceholderText(/new habit name/i);
+    const detailsInput = screen.getByPlaceholderText(/details \(optional\)/i);
+    await userEvent.type(nameInput, 'Morning Run');
+    await userEvent.type(detailsInput, '25 min');
+    await userEvent.click(screen.getByRole('button', { name: /add habit/i }));
+    expect(nameInput).toHaveValue('');
+    expect(detailsInput).toHaveValue('');
   });
 
   it('does not call onAdd when input is empty', async () => {

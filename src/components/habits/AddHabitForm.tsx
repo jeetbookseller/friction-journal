@@ -2,34 +2,43 @@ import { useState } from 'react';
 import { MAX_ACTIVE_HABITS } from '../../lib/constants';
 
 interface AddHabitFormProps {
-  onAdd: (name: string) => Promise<void>;
+  onAdd: (name: string, details: string) => Promise<void>;
   capReached: boolean;
 }
 
 export function AddHabitForm({ onAdd, capReached }: AddHabitFormProps) {
-  const [value, setValue] = useState('');
+  const [name, setName] = useState('');
+  const [details, setDetails] = useState('');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const trimmed = value.trim();
+    const trimmed = name.trim();
     if (!trimmed) return;
-    await onAdd(trimmed);
-    setValue('');
+    await onAdd(trimmed, details.trim());
+    setName('');
+    setDetails('');
   }
 
   return (
     <form onSubmit={handleSubmit} className="p-3 flex flex-col gap-2">
       {capReached && (
         <p className="text-sm bg-warning-subtle text-warning rounded-lg px-3 py-2">
-          All {MAX_ACTIVE_HABITS} habit slots are used. Deactivate one to add another.
+          All {MAX_ACTIVE_HABITS} habit slots are used. Delete one to add another.
         </p>
       )}
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="New habit name…"
+        className="bg-surface-raised text-sm text-on-surface rounded-lg px-3 py-2 placeholder:text-on-surface-faint border border-border focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+      />
       <div className="flex gap-2">
         <input
           type="text"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="New habit name…"
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+          placeholder="Details (optional)…"
           className="flex-1 bg-surface-raised text-sm text-on-surface rounded-lg px-3 py-2 placeholder:text-on-surface-faint border border-border focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
         />
         <button

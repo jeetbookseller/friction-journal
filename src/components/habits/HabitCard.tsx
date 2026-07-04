@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { format, subDays, parseISO } from 'date-fns';
 import { isTestRun } from '../../hooks/useHabits';
+import { Modal } from '../ui/Modal';
 import type { Habit, HabitLog } from '../../db/models';
 
 interface HabitCardProps {
@@ -7,12 +9,24 @@ interface HabitCardProps {
   logs: HabitLog[];
   today: string;
   onToggleToday: (habitUuid: string, date: string) => Promise<void>;
-  onDeactivate: (id: number) => Promise<void>;
+  onUpdateDetails: (id: number, details: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
 }
 
 const DOT_COUNT = 14;
 
-export function HabitCard({ habit, logs, today, onToggleToday, onDeactivate }: HabitCardProps) {
+export function HabitCard({
+  habit,
+  logs,
+  today,
+  onToggleToday,
+  onUpdateDetails,
+  onDelete,
+}: HabitCardProps) {
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
   const completedDates = new Set(
     logs.filter((l) => l.completed === 1).map((l) => l.date),
   );
@@ -24,9 +38,32 @@ export function HabitCard({ habit, logs, today, onToggleToday, onDeactivate }: H
     dots.push(format(subDays(parseISO(today), i), 'yyyy-MM-dd'));
   }
 
+  function startEditingDetails() {
+    setEditValue(habit.details);
+    setIsEditingDetails(true);
+  }
+
+  function commitDetails() {
+    const trimmed = editValue.trim();
+    if (trimmed !== habit.details) {
+      onUpdateDetails(habit.id!, trimmed);
+    }
+    setIsEditingDetails(false);
+    setEditValue('');
+  }
+
+  function handleDetailsKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      commitDetails();
+    } else if (e.key === 'Escape') {
+      setIsEditingDetails(false);
+      setEditValue('');
+    }
+  }
+
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm text-on-surface">{habit.name}</span>
           {isTestRun(habit) && (
@@ -36,13 +73,36 @@ export function HabitCard({ habit, logs, today, onToggleToday, onDeactivate }: H
           )}
         </div>
         <button
-          aria-label="Deactivate habit"
-          onClick={() => onDeactivate(habit.id!)}
+          aria-label="Delete habit"
+          onClick={() => setConfirmingDelete(true)}
           className="text-xs text-on-surface-faint hover:text-danger transition-colors"
         >
-          Deactivate
+          Delete
         </button>
       </div>
+
+      {isEditingDetails ? (
+        <input
+          type="text"
+          aria-label="Edit habit details"
+          className="w-full mb-3 bg-transparent text-xs text-on-surface outline-none border-b border-accent"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitDetails}
+          onKeyDown={handleDetailsKeyDown}
+          autoFocus
+        />
+      ) : (
+        <p
+          onClick={startEditingDetails}
+          className={[
+            'mb-3 text-xs cursor-text',
+            habit.details ? 'text-on-surface-muted' : 'text-on-surface-faint italic',
+          ].join(' ')}
+        >
+          {habit.details || 'Add details…'}
+        </p>
+      )}
 
       <div className="flex gap-1 mb-3">
         {dots.map((date) => (
@@ -71,6 +131,35 @@ export function HabitCard({ habit, logs, today, onToggleToday, onDeactivate }: H
       >
         {todayCompleted ? 'Done ✓' : 'Mark Done'}
       </button>
+
+      <Modal
+        open={confirmingDelete}
+        title="Delete habit?"
+        onClose={() => setConfirmingDelete(false)}
+      >
+        <p className="mb-4 text-sm text-on-surface-muted">
+          '{habit.name}' will be removed. To rename a habit, delete it and create a
+          new one.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setConfirmingDelete(false)}
+            className="px-3 py-2 text-sm rounded-lg bg-surface-overlay text-on-surface hover:bg-accent-subtle"
+          >
+            Cancel
+          </button>
+          <button
+            aria-label="Confirm delete habit"
+            onClick={() => {
+              setConfirmingDelete(false);
+              onDelete(habit.id!);
+            }}
+            className="px-3 py-2 text-sm rounded-lg bg-danger text-on-accent hover:opacity-90"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
