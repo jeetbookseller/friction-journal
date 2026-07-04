@@ -36,6 +36,7 @@ vi.mock('../../../db/database', () => ({
 
 // Mock the hook so RapidLogFeed tests don't need IndexedDB
 const mockAddRapidLog = vi.fn();
+const mockUpdateRapidLogBody = vi.fn();
 const mockDeleteRapidLog = vi.fn();
 let mockLogs: RapidLog[] = [];
 
@@ -43,6 +44,7 @@ vi.mock('../../../hooks/useRapidLogs', () => ({
   useRapidLogs: (_userId: string, filter?: RapidLog['tag']) => ({
     logs: filter ? mockLogs.filter((l) => l.tag === filter) : mockLogs,
     addRapidLog: mockAddRapidLog,
+    updateRapidLogBody: mockUpdateRapidLogBody,
     deleteRapidLog: mockDeleteRapidLog,
   }),
 }));
@@ -69,6 +71,7 @@ function makeRapidLog(overrides: Partial<RapidLog> = {}): RapidLog {
 beforeEach(() => {
   mockLogs = [];
   mockAddRapidLog.mockReset();
+  mockUpdateRapidLogBody.mockReset();
   mockDeleteRapidLog.mockReset();
   mockShowToast.mockReset();
 });
@@ -137,16 +140,66 @@ describe('RapidLogFeed', () => {
     expect(screen.getByText('Second entry')).toBeInTheDocument();
   });
 
-  it('log entries have staggered animation-delay via AnimatedList', () => {
-    mockLogs = [
-      makeRapidLog({ id: 1, body: 'First entry', tag: 'note' }),
-      makeRapidLog({ id: 2, body: 'Second entry', tag: 'event' }),
-    ];
-    render(<RapidLogFeed />);
-    const items = screen.getAllByRole('listitem');
-    // AnimatedList clones children with incrementing animation-delay
-    expect(items[0]).toHaveStyle({ animationDelay: '0ms' });
-    expect(items[1]).toHaveStyle({ animationDelay: '50ms' });
+  describe('weekly sections', () => {
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+    it('current-week entries are visible by default', () => {
+      mockLogs = [makeRapidLog({ id: 1, body: 'This week entry' })];
+      render(<RapidLogFeed />);
+      expect(screen.getByText('This week entry')).toBeInTheDocument();
+    });
+
+    it('shows a week header with an entry count', () => {
+      mockLogs = [
+        makeRapidLog({ id: 1, body: 'Entry A' }),
+        makeRapidLog({ id: 2, body: 'Entry B' }),
+      ];
+      render(<RapidLogFeed />);
+      const header = screen.getByRole('button', { expanded: true });
+      expect(within(header).getByText('2')).toBeInTheDocument();
+    });
+
+    it('older weeks are collapsed: header only, no entries', () => {
+      mockLogs = [
+        makeRapidLog({ id: 1, body: 'Old entry', created_at: Date.now() - 2 * WEEK_MS }),
+      ];
+      render(<RapidLogFeed />);
+      expect(screen.queryByText('Old entry')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { expanded: false })).toBeInTheDocument();
+    });
+
+    it('clicking a collapsed week header reveals its entries', async () => {
+      mockLogs = [
+        makeRapidLog({ id: 1, body: 'Old entry', created_at: Date.now() - 2 * WEEK_MS }),
+      ];
+      render(<RapidLogFeed />);
+      await userEvent.click(screen.getByRole('button', { expanded: false }));
+      expect(screen.getByText('Old entry')).toBeInTheDocument();
+    });
+
+    it('expanded weeks show a day header with the absolute date', () => {
+      const created = Date.now();
+      mockLogs = [makeRapidLog({ id: 1, body: 'Dated entry', created_at: created })];
+      render(<RapidLogFeed />);
+      // dayLabel format: "Fri, Jul 4"
+      const expected = new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      }).format(created);
+      const [weekday, monthDay] = expected.split(', ');
+      expect(screen.getByText(`${weekday}, ${monthDay}`)).toBeInTheDocument();
+    });
+
+    it('calls updateRapidLogBody when an entry body is edited', async () => {
+      mockLogs = [makeRapidLog({ id: 7, body: 'Original body' })];
+      render(<RapidLogFeed />);
+      await userEvent.click(screen.getByText('Original body'));
+      const input = screen.getByLabelText('Edit log entry');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'Edited body{Enter}');
+      expect(mockUpdateRapidLogBody).toHaveBeenCalledWith(7, 'Edited body');
+    });
   });
 
   it('clicking a tag chip makes it active', async () => {

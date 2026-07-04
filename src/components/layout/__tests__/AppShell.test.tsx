@@ -153,3 +153,19 @@ describe('AppShell', () => {
     });
   });
 });
+
+describe('AppShell metrics link', () => {
+  it('renders Metrics links pointing to /metrics outside the tab navs', () => {
+    renderWithRouter();
+    const metricsLinks = screen.getAllByRole('link', { name: /open metrics/i });
+    expect(metricsLinks.length).toBeGreaterThanOrEqual(1);
+    for (const link of metricsLinks) {
+      expect(link).toHaveAttribute('href', '/metrics');
+    }
+    // Not part of the 4-tab navs
+    const mobileNav = screen.getByRole('navigation', { name: /tab navigation/i });
+    expect(within(mobileNav).getAllByRole('link')).toHaveLength(4);
+    const sidebarNav = screen.getByRole('navigation', { name: /sidebar navigation/i });
+    expect(within(sidebarNav).getAllByRole('link')).toHaveLength(4);
+  });
+});

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import type { RapidLog } from '../../db/models';
 
@@ -10,6 +11,7 @@ const TAG_STYLES: Record<RapidLog['tag'], { pill: string; label: string }> = {
 interface RapidLogEntryProps {
   entry: RapidLog;
   onDelete: (id: number) => void;
+  onUpdateBody?: (id: number, body: string) => void;
   onSendToWork?: (entry: RapidLog) => void;
   isSending?: boolean;
 }
@@ -17,18 +19,66 @@ interface RapidLogEntryProps {
 export function RapidLogEntry({
   entry,
   onDelete,
+  onUpdateBody,
   onSendToWork = () => {},
   isSending = false,
 }: RapidLogEntryProps) {
   const { pill, label } = TAG_STYLES[entry.tag];
   const alreadySent = entry.sent_to_ph === 1;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  function startEditing() {
+    if (!onUpdateBody) return;
+    setEditValue(entry.body);
+    setIsEditing(true);
+  }
+
+  function commitEdit() {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== entry.body) {
+      onUpdateBody?.(entry.id!, trimmed);
+    }
+    setIsEditing(false);
+    setEditValue('');
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      commitEdit();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setEditValue('');
+    }
+  }
 
   return (
     <div className="group flex items-start gap-2 py-2 px-3">
       <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 text-xs font-medium ${pill}`}>
         {label}
       </span>
-      <span className="flex-1 text-sm text-on-surface">{entry.body}</span>
+      {isEditing ? (
+        <input
+          type="text"
+          aria-label="Edit log entry"
+          maxLength={280}
+          className="flex-1 bg-transparent text-sm text-on-surface outline-none border-b border-accent"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleKeyDown}
+          autoFocus
+        />
+      ) : (
+        <span
+          onClick={startEditing}
+          className={['flex-1 text-sm text-on-surface', onUpdateBody ? 'cursor-text' : '']
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {entry.body}
+        </span>
+      )}
       <span
         data-testid="relative-timestamp"
         className="shrink-0 text-xs text-on-surface-faint"

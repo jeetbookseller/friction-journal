@@ -7,6 +7,7 @@ import { ActionList } from './components/actions/ActionList';
 import { TimelineView } from './components/timeline/TimelineView';
 import { HabitTracker } from './components/habits/HabitTracker';
 import { RapidLogFeed } from './components/rapid-log/RapidLogFeed';
+import { MetricsView } from './components/metrics/MetricsView';
 
 function AppContent() {
   const { session, loading } = useAuthContext();
@@ -29,6 +30,7 @@ function AppContent() {
           <Route path="timeline" element={<TimelineView />} />
           <Route path="habits" element={<HabitTracker />} />
           <Route path="log" element={<RapidLogFeed />} />
+          <Route path="metrics" element={<MetricsView />} />
         </Route>
       </Routes>
     </HashRouter>

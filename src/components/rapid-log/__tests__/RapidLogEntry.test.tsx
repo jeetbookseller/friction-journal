@@ -88,3 +88,54 @@ describe('RapidLogEntry', () => {
     expect(onDelete).toHaveBeenCalledWith(42);
   });
 });
+
+describe('RapidLogEntry editing', () => {
+  it('clicking the body enters edit mode when onUpdateBody is provided', async () => {
+    render(
+      <RapidLogEntry
+        entry={makeRapidLog({ body: 'Editable body' })}
+        onDelete={vi.fn()}
+        onUpdateBody={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByText('Editable body'));
+    expect(screen.getByLabelText('Edit log entry')).toHaveValue('Editable body');
+  });
+
+  it('Enter commits the edit via onUpdateBody', async () => {
+    const onUpdateBody = vi.fn();
+    render(
+      <RapidLogEntry
+        entry={makeRapidLog({ id: 5, body: 'Old body' })}
+        onDelete={vi.fn()}
+        onUpdateBody={onUpdateBody}
+      />,
+    );
+    await userEvent.click(screen.getByText('Old body'));
+    const input = screen.getByLabelText('Edit log entry');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'New body{Enter}');
+    expect(onUpdateBody).toHaveBeenCalledWith(5, 'New body');
+  });
+
+  it('Escape cancels the edit without committing', async () => {
+    const onUpdateBody = vi.fn();
+    render(
+      <RapidLogEntry
+        entry={makeRapidLog({ body: 'Old body' })}
+        onDelete={vi.fn()}
+        onUpdateBody={onUpdateBody}
+      />,
+    );
+    await userEvent.click(screen.getByText('Old body'));
+    await userEvent.type(screen.getByLabelText('Edit log entry'), ' changed{Escape}');
+    expect(onUpdateBody).not.toHaveBeenCalled();
+    expect(screen.getByText('Old body')).toBeInTheDocument();
+  });
+
+  it('does not enter edit mode without onUpdateBody', async () => {
+    render(<RapidLogEntry entry={makeRapidLog({ body: 'Static body' })} onDelete={vi.fn()} />);
+    await userEvent.click(screen.getByText('Static body'));
+    expect(screen.queryByLabelText('Edit log entry')).not.toBeInTheDocument();
+  });
+});

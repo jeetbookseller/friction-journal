@@ -28,6 +28,7 @@ export interface Habit {
   uuid: string;
   user_id: string;
   name: string;
+  details: string;
   is_active: 0 | 1;
   created_at: number;
   updated_at: number;

@@ -30,10 +30,11 @@ interface HabitSlotProps {
   habit: Habit;
   today: string;
   onToggleToday: (habitUuid: string, date: string) => Promise<void>;
-  onDeactivate: (id: number) => Promise<void>;
+  onUpdateDetails: (id: number, details: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
 }
 
-function HabitSlot({ habit, today, onToggleToday, onDeactivate }: HabitSlotProps) {
+function HabitSlot({ habit, today, onToggleToday, onUpdateDetails, onDelete }: HabitSlotProps) {
   const startDate = format(subDays(parseISO(today), 13), 'yyyy-MM-dd');
   const logs = useHabitLogs(habit.uuid, startDate, today);
   return (
@@ -42,7 +43,8 @@ function HabitSlot({ habit, today, onToggleToday, onDeactivate }: HabitSlotProps
       logs={logs}
       today={today}
       onToggleToday={onToggleToday}
-      onDeactivate={onDeactivate}
+      onUpdateDetails={onUpdateDetails}
+      onDelete={onDelete}
     />
   );
 }
@@ -51,7 +53,8 @@ export function HabitTracker() {
   const today = todayString();
   const { session } = useAuthContext();
   const userId = session!.user.id;
-  const { habits, activeCount, addHabit, deactivateHabit, toggleHabitLog } = useActiveHabits(userId);
+  const { habits, activeCount, addHabit, updateHabitDetails, deleteHabit, toggleHabitLog } =
+    useActiveHabits(userId);
   const capReached = activeCount >= MAX_ACTIVE_HABITS;
 
   return (
@@ -83,7 +86,8 @@ export function HabitTracker() {
                     habit={habit}
                     today={today}
                     onToggleToday={toggleHabitLog}
-                    onDeactivate={deactivateHabit}
+                    onUpdateDetails={updateHabitDetails}
+                    onDelete={deleteHabit}
                   />
                 </Card>
               </li>

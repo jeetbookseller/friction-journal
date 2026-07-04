@@ -1,6 +1,18 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthContext } from '../AuthProvider';
 
+function ChartIcon({ width = 14, height = 14 }: { width?: number; height?: number }) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+         aria-hidden="true">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+
 function CheckIcon() {
   return (
     <svg
@@ -123,6 +135,16 @@ export function AppShell() {
           Personal Journal
         </span>
         <div className="flex items-center gap-1">
+          <NavLink
+            to="/metrics"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium
+                       text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]
+                       transition-colors rounded-lg"
+            aria-label="Open Metrics"
+          >
+            <ChartIcon />
+            <span>Metrics</span>
+          </NavLink>
           <a
             href={otherAppUrl}
             className="flex items-center gap-1 px-2 py-1 text-xs font-medium
@@ -173,6 +195,19 @@ export function AppShell() {
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-1 px-0">
+          <NavLink
+            to="/metrics"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150
+               text-sm font-medium ${
+                 isActive ? 'bg-accent-subtle text-nav-active' : 'text-nav-inactive hover:bg-surface-overlay'
+               }`
+            }
+            aria-label="Open Metrics"
+          >
+            <ChartIcon width={20} height={20} />
+            <span>Metrics</span>
+          </NavLink>
           <a
             href={otherAppUrl}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150
